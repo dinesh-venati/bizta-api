@@ -470,6 +470,233 @@
         }
       ],
       "description": "Authentication endpoints for user registration, login, and token management.\n\n## Multi-tenant Architecture\nAll authentication is multi-tenant aware:\n- JWT tokens contain `orgId` from user's primary organization\n- All subsequent API calls are automatically scoped to that organization\n- Cannot access data from other organizations\n\n## Token Strategy\n- **Access Token**: 15 minute expiry, used for API calls\n- **Refresh Token**: 7 day expiry, used to get new access tokens\n\n## Security\n- Passwords hashed with bcrypt (12 rounds)\n- JWT signed with HS256\n- Global JWT guard protects all endpoints except those marked `@Public()`"
+    },
+    {
+      "name": "WhatsApp Webhooks",
+      "item": [
+        {
+          "name": "Webhook Verification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token={{webhookVerifyToken}}&hub.challenge=test123",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "whatsapp"],
+              "query": [
+                {
+                  "key": "hub.mode",
+                  "value": "subscribe"
+                },
+                {
+                  "key": "hub.verify_token",
+                  "value": "{{webhookVerifyToken}}"
+                },
+                {
+                  "key": "hub.challenge",
+                  "value": "test123"
+                }
+              ]
+            },
+            "description": "WhatsApp webhook verification endpoint.\n\n**Public endpoint** - No authentication required.\n\n### What it does:\nMeta (Facebook) calls this endpoint during webhook setup to verify your server.\n\n### Query Parameters:\n- `hub.mode` - Should be \"subscribe\"\n- `hub.verify_token` - Your verification token (from WHATSAPP_WEBHOOK_VERIFY_TOKEN)\n- `hub.challenge` - Random string sent by Meta\n\n### Response:\nIf verification succeeds, returns the `hub.challenge` value.\n\n### Setup:\n1. Set `webhookVerifyToken` variable to your token\n2. Run this request to test\n3. Use the webhook URL in Meta Business Suite"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=your-webhook-verify-token&hub.challenge=test123",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["webhooks", "whatsapp"],
+                  "query": [
+                    {
+                      "key": "hub.mode",
+                      "value": "subscribe"
+                    },
+                    {
+                      "key": "hub.verify_token",
+                      "value": "your-webhook-verify-token"
+                    },
+                    {
+                      "key": "hub.challenge",
+                      "value": "test123"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/plain"
+                }
+              ],
+              "cookie": [],
+              "body": "test123"
+            },
+            {
+              "name": "Invalid Token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=wrong-token&hub.challenge=test123",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["webhooks", "whatsapp"],
+                  "query": [
+                    {
+                      "key": "hub.mode",
+                      "value": "subscribe"
+                    },
+                    {
+                      "key": "hub.verify_token",
+                      "value": "wrong-token"
+                    },
+                    {
+                      "key": "hub.challenge",
+                      "value": "test123"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"Invalid verification token\",\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Receive Webhook Message",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate HMAC SHA256 signature",
+                  "const webhookSecret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = pm.request.body.raw;",
+                  "",
+                  "const signature = CryptoJS.HmacSHA256(body, webhookSecret).toString(CryptoJS.enc.Hex);",
+                  "pm.collectionVariables.set('calculatedSignature', 'sha256=' + signature);",
+                  "console.log('Generated signature:', 'sha256=' + signature);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Hub-Signature-256",
+                "value": "{{calculatedSignature}}",
+                "description": "HMAC SHA256 signature (auto-generated in pre-request script)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [\n    {\n      \"id\": \"123456789\",\n      \"changes\": [\n        {\n          \"field\": \"messages\",\n          \"value\": {\n            \"messaging_product\": \"whatsapp\",\n            \"messages\": [\n              {\n                \"from\": \"1234567890\",\n                \"id\": \"wamid.test123\",\n                \"timestamp\": \"1700000000\",\n                \"type\": \"text\",\n                \"text\": {\n                  \"body\": \"Hello from Postman!\"\n                }\n              }\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/whatsapp",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "whatsapp"]
+            },
+            "description": "Receive WhatsApp webhook messages.\n\n**Public endpoint** - No authentication required (uses signature verification).\n\n### What it does:\n1. Verifies HMAC SHA256 signature\n2. Normalizes Meta's payload to BiztaEvent\n3. Stores event in database\n4. Enqueues job to Redis (agent-events queue)\n5. Agent processor handles the event\n\n### Headers:\n- `X-Hub-Signature-256` - HMAC SHA256 signature (auto-generated)\n\n### Body:\nMeta's webhook payload format with message data.\n\n### Flow:\nWebhook → Signature Check → Normalize → DB Event → Redis Queue → Agent\n\n### Pre-request Script:\nAutomatically generates signature using `webhookSecret` variable.\n\n### Response:\n`{\"status\": \"ok\"}` on success"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Hub-Signature-256",
+                    "value": "sha256=..."
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [\n    {\n      \"id\": \"123456789\",\n      \"changes\": [\n        {\n          \"field\": \"messages\",\n          \"value\": {\n            \"messaging_product\": \"whatsapp\",\n            \"messages\": [\n              {\n                \"from\": \"1234567890\",\n                \"id\": \"wamid.test123\",\n                \"timestamp\": \"1700000000\",\n                \"type\": \"text\",\n                \"text\": {\n                  \"body\": \"Hello!\"\n                }\n              }\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/whatsapp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["webhooks", "whatsapp"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\"\n}"
+            },
+            {
+              "name": "Invalid Signature",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Hub-Signature-256",
+                    "value": "sha256=invalid"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": []\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/webhooks/whatsapp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["webhooks", "whatsapp"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Invalid signature\",\n  \"error\": \"Unauthorized\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "WhatsApp webhook endpoints for receiving messages.\n\n## Overview\nThese endpoints handle incoming WhatsApp messages from Meta's webhook system.\n\n## Setup\n1. Set collection variables:\n   - `webhookVerifyToken` - Your verification token\n   - `webhookSecret` - Your webhook secret\n2. Test verification endpoint\n3. Test message receipt\n\n## Security\n- Webhook verification uses verify token\n- Message receipt uses HMAC SHA256 signature\n- Both endpoints are public (no JWT required)\n\n## Flow\n```\nWhatsApp → Meta → POST /webhooks/whatsapp\n  → Verify signature\n  → Create Event (DB)\n  → Enqueue to Redis\n  → Agent processes\n```"
     }
   ],
   "variable": [
@@ -485,6 +712,21 @@
     },
     {
       "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhookVerifyToken",
+      "value": "your-webhook-verify-token",
+      "type": "string"
+    },
+    {
+      "key": "webhookSecret",
+      "value": "your-webhook-secret",
+      "type": "string"
+    },
+    {
+      "key": "calculatedSignature",
       "value": "",
       "type": "string"
     }

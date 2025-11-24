@@ -21,6 +21,8 @@ import { AgentModule } from './modules/agent/agent.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { WhatsAppModule } from './modules/channels/whatsapp/whatsapp.module';
+import { AgentEventsProcessor } from './queues/agent-events.processor';
 
 @Module({
   imports: [
@@ -68,8 +70,11 @@ import { AuditModule } from './modules/audit/audit.module';
     SkillsModule,
     SettingsModule,
     AuditModule,
+    WhatsAppModule,
   ],
   providers: [
+    // Queue processors
+    AgentEventsProcessor,
     // Global JWT guard - all routes protected by default
     {
       provide: APP_GUARD,
