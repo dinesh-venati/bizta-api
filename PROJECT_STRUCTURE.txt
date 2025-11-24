@@ -1,0 +1,101 @@
+bizta-backend/
+│
+├── prisma/
+│   └── schema.prisma                    # Complete database schema (User, Org, Channel, etc.)
+│
+├── src/
+│   ├── common/
+│   │   ├── decorators/
+│   │   │   ├── auth.decorator.ts        # @Public(), @Roles()
+│   │   │   ├── user.decorator.ts        # @CurrentUser(), @CurrentOrg()
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── prisma/
+│   │   │   ├── prisma.service.ts        # Database connection service
+│   │   │   └── prisma.module.ts         # Global Prisma module
+│   │   │
+│   │   ├── services/
+│   │   │   ├── encryption.service.ts    # AES-256 encryption for API keys
+│   │   │   └── encryption.module.ts
+│   │   │
+│   │   └── types/
+│   │       ├── agent.types.ts           # BiztaEvent, LLMResponse, AgentContext
+│   │       └── index.ts
+│   │
+│   ├── modules/
+│   │   ├── health/
+│   │   │   ├── health.controller.ts     # GET /health (ready)
+│   │   │   ├── health.service.ts        # Health check logic
+│   │   │   └── health.module.ts
+│   │   │
+│   │   ├── auth/
+│   │   │   └── auth.module.ts           # JWT authentication (scaffold)
+│   │   │
+│   │   ├── users/
+│   │   │   └── users.module.ts          # User management (scaffold)
+│   │   │
+│   │   ├── orgs/
+│   │   │   └── orgs.module.ts           # Multi-tenant orgs (scaffold)
+│   │   │
+│   │   ├── channels/
+│   │   │   └── channels.module.ts       # WhatsApp, WebChat, etc. (scaffold)
+│   │   │
+│   │   ├── conversations/
+│   │   │   └── conversations.module.ts  # Conversation management (scaffold)
+│   │   │
+│   │   ├── messages/
+│   │   │   └── messages.module.ts       # Message handling (scaffold)
+│   │   │
+│   │   ├── events/
+│   │   │   └── events.module.ts         # Event normalization (scaffold)
+│   │   │
+│   │   ├── agent/
+│   │   │   └── agent.module.ts          # AI orchestrator (scaffold)
+│   │   │
+│   │   ├── skills/
+│   │   │   └── skills.module.ts         # Skill modules (scaffold)
+│   │   │
+│   │   ├── settings/
+│   │   │   └── settings.module.ts       # Org settings (scaffold)
+│   │   │
+│   │   └── audit/
+│   │       └── audit.module.ts          # Audit logging (scaffold)
+│   │
+│   ├── app.module.ts                    # Root module with all imports
+│   └── main.ts                          # Bootstrap application
+│
+├── .env.example                         # Environment template
+├── .gitignore                           # Git ignore rules
+├── .prettierrc                          # Code formatting config
+├── .eslintrc.js                         # Linting rules
+├── nest-cli.json                        # NestJS CLI config
+├── tsconfig.json                        # TypeScript config
+├── package.json                         # Dependencies & scripts
+│
+├── README.md                            # Complete project documentation
+├── SETUP.md                             # Step-by-step setup guide
+├── ARCHITECTURE.md                      # System architecture & design
+├── COMMANDS.md                          # Quick command reference
+└── setup.ps1                            # Automated setup script
+
+════════════════════════════════════════════════════════════════
+
+✅ READY COMPONENTS:
+   - Health endpoint (/api/v1/health)
+   - Prisma schema (all 12 models)
+   - Database service (global)
+   - Encryption service (API keys + passwords)
+   - Module scaffolds (11 feature modules)
+   - BullMQ queue configuration
+   - JWT + rate limiting setup
+   - Multi-tenant decorators
+
+📦 NEXT TO IMPLEMENT:
+   1. WhatsApp webhook handling
+   2. Event queue processing
+   3. Agent orchestrator (LLM tool-calling)
+   4. Messaging skill
+   5. Follow-up skill
+   6. Summary skill
+
+════════════════════════════════════════════════════════════════
