@@ -36,7 +36,16 @@ export class WhatsAppService {
   /**
    * Process a single message and create event
    */
-  private async processMessage(message: any, businessAccountId: string): Promise<void> {
+  private async processMessage(
+    message: {
+      from: string;
+      id: string;
+      timestamp: string;
+      type: string;
+      text?: { body: string };
+    },
+    businessAccountId: string,
+  ): Promise<void> {
     // Extract message details
     const from = message.from;
     const messageId = message.id;

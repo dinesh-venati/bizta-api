@@ -2,13 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@/common/prisma/prisma.service';
-import { EventType, EventStatus, Event } from '@prisma/client';
+import { EventType, EventStatus, Event, Prisma } from '@prisma/client';
 
 export interface CreateEventDto {
   orgId: string;
   type: EventType;
-  payload: any;
-  metadata?: any;
+  payload: Prisma.JsonValue;
+  metadata?: Prisma.JsonValue;
 }
 
 @Injectable()
@@ -29,8 +29,8 @@ export class EventsService {
       data: {
         type: data.type,
         status: EventStatus.PENDING,
-        payload: data.payload,
-        metadata: data.metadata || {},
+        payload: data.payload as Prisma.InputJsonValue,
+        metadata: (data.metadata || {}) as Prisma.InputJsonValue,
         orgId: data.orgId,
       },
     });
