@@ -205,13 +205,16 @@ export class AgentService {
       return;
     }
 
-    // 4. Generate reply using LLM
+    // 4. Generate reply using LLM (with conversation context)
     const replyText = await this.llm.generateReplyForMessage({
       orgId: event.orgId,
       messageText,
       channel: 'whatsapp',
       businessContext: {
         businessName: settings.agentName || 'Bizta',
+        conversationHistory: recentMessages,
+        leadScore: classification.leadScore,
+        requiresHuman: classification.requiresHuman,
       },
     });
 

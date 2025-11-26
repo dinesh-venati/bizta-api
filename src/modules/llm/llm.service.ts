@@ -61,14 +61,32 @@ export class LlmService {
       // Build system prompt
       const systemPrompt = this.buildSystemPrompt(businessContext);
 
+      // Build messages array with conversation history if available
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: systemPrompt },
+      ];
+
+      // Add conversation history if provided
+      if (
+        businessContext?.conversationHistory &&
+        Array.isArray(businessContext.conversationHistory)
+      ) {
+        for (const msg of businessContext.conversationHistory) {
+          messages.push({
+            role: msg.from === 'customer' ? 'user' : 'assistant',
+            content: msg.text,
+          });
+        }
+      } else {
+        // No history, just add current message
+        messages.push({ role: 'user', content: messageText });
+      }
+
       // Call OpenAI with timeout
       const completion = await Promise.race([
         this.openai.chat.completions.create({
           model: this.defaultModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: messageText },
-          ],
+          messages,
           temperature: 0.7,
           max_tokens: 500,
         }),
@@ -104,13 +122,16 @@ export class LlmService {
     const personality = businessContext?.agentPersonality || 'friendly and professional';
     const businessName = businessContext?.businessName;
     const businessDescription = businessContext?.businessDescription;
+    const requiresHuman = businessContext?.requiresHuman === true;
+    const leadScore =
+      typeof businessContext?.leadScore === 'number' ? businessContext.leadScore : 0;
 
     let prompt = `You are ${agentName}, an AI business assistant. You are ${personality}.
 
 Your role:
 - Respond to customer inquiries promptly and helpfully
 - Be concise but warm (aim for 2-3 sentences unless more detail is needed)
-- If you don't know specific information about the business, acknowledge it and offer to help the human follow up
+- If you don't know specific information about the business, acknowledge it and offer to help connect them with the team
 - Never make up facts about the business`;
 
     if (businessName) {
@@ -121,7 +142,12 @@ Your role:
       prompt += `\n\nBusiness context:\n${businessDescription}`;
     }
 
-    // TODO: In future, add FAQs, services, business hours here
+    // Add context for high-priority conversations
+    if (requiresHuman) {
+      prompt += `\n\n⚠️ IMPORTANT: This customer needs human attention (callback request, complex issue, or urgent matter). Acknowledge their request and assure them a team member will reach out shortly.`;
+    } else if (leadScore >= 80) {
+      prompt += `\n\n🔥 This is a hot lead (score: ${leadScore}/100). Prioritize their inquiry and be extra helpful to convert.`;
+    }
 
     return prompt;
   }
