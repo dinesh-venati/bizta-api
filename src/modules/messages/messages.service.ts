@@ -19,8 +19,7 @@ export class MessagesService {
     rawPayload?: Prisma.JsonValue;
     externalId?: string;
   }): Promise<Message> {
-    const { conversationId, orgId, direction, content, rawPayload, externalId } =
-      params;
+    const { conversationId, orgId, direction, content, rawPayload, externalId } = params;
 
     // Get conversation to find channelId
     const conversation = await this.prisma.conversation.findUnique({
@@ -37,10 +36,7 @@ export class MessagesService {
         conversationId,
         orgId,
         channelId: conversation.channelId,
-        direction:
-          direction === 'inbound'
-            ? MessageDirection.INBOUND
-            : MessageDirection.OUTBOUND,
+        direction: direction === 'inbound' ? MessageDirection.INBOUND : MessageDirection.OUTBOUND,
         content,
         ...(rawPayload && { metadata: rawPayload }),
         externalId: externalId || null,
@@ -55,10 +51,7 @@ export class MessagesService {
    * @param limit - Maximum number of messages to return
    * @returns Array of messages
    */
-  async findByConversationId(
-    conversationId: string,
-    limit = 50,
-  ): Promise<Message[]> {
+  async findByConversationId(conversationId: string, limit = 50): Promise<Message[]> {
     return this.prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'desc' },

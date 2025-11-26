@@ -32,7 +32,7 @@ export class AuthController {
 
   @Get('me')
   @HttpCode(HttpStatus.OK)
-  async getMe(@CurrentUser() user: any) {
+  async getMe(@CurrentUser() user: { userId: string; orgId: string }) {
     return this.authService.getCurrentUser(user.userId, user.orgId);
   }
 }

@@ -58,7 +58,7 @@ export class NotificationsService {
   /**
    * TODO: Implement real email sending
    * Example with nodemailer + SMTP:
-   * 
+   *
    * private async sendRealEmail(to: string, subject: string, text: string): Promise<void> {
    *   const transporter = nodemailer.createTransport({
    *     host: this.configService.get<string>('SMTP_HOST'),
@@ -69,7 +69,7 @@ export class NotificationsService {
    *       pass: this.configService.get<string>('SMTP_PASS'),
    *     },
    *   });
-   * 
+   *
    *   await transporter.sendMail({
    *     from: this.configService.get<string>('EMAIL_FROM'),
    *     to,
@@ -77,7 +77,7 @@ export class NotificationsService {
    *     text,
    *   });
    * }
-   * 
+   *
    * Environment variables needed:
    * - SMTP_HOST=smtp.example.com
    * - SMTP_PORT=465

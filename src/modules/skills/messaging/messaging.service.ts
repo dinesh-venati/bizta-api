@@ -18,15 +18,11 @@ export class MessagingService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiUrl = this.configService.get<string>('WHATSAPP_API_URL') || '';
-    this.phoneNumberId =
-      this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID') || '';
-    this.accessToken =
-      this.configService.get<string>('WHATSAPP_ACCESS_TOKEN') || '';
+    this.phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID') || '';
+    this.accessToken = this.configService.get<string>('WHATSAPP_ACCESS_TOKEN') || '';
 
     if (!this.apiUrl || !this.phoneNumberId || !this.accessToken) {
-      this.logger.warn(
-        'WhatsApp API configuration incomplete - messaging will fail',
-      );
+      this.logger.warn('WhatsApp API configuration incomplete - messaging will fail');
     }
   }
 
@@ -34,11 +30,9 @@ export class MessagingService {
    * Send a text message via WhatsApp Cloud API
    */
   async sendWhatsAppText(params: SendWhatsAppTextParams): Promise<{ messageId: string }> {
-    const { to, text, orgId, metadata } = params;
+    const { to, text, orgId } = params;
 
-    this.logger.log(
-      `Sending WhatsApp text to ${to} (org: ${orgId}): ${text.substring(0, 50)}...`,
-    );
+    this.logger.log(`Sending WhatsApp text to ${to} (org: ${orgId}): ${text.substring(0, 50)}...`);
 
     try {
       const url = `${this.apiUrl}/${this.phoneNumberId}/messages`;
@@ -68,28 +62,20 @@ export class MessagingService {
 
       const messageId = response.data.messages?.[0]?.id || 'unknown';
 
-      this.logger.log(
-        `✅ WhatsApp message sent successfully to ${to} (messageId: ${messageId})`,
-      );
+      this.logger.log(`✅ WhatsApp message sent successfully to ${to} (messageId: ${messageId})`);
 
       return { messageId };
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
-        this.logger.error(
-          `Failed to send WhatsApp message: ${axiosError.message}`,
-          {
-            status: axiosError.response?.status,
-            data: axiosError.response?.data,
-            to,
-            orgId,
-          },
-        );
+        this.logger.error(`Failed to send WhatsApp message: ${axiosError.message}`, {
+          status: axiosError.response?.status,
+          data: axiosError.response?.data,
+          to,
+          orgId,
+        });
       } else {
-        this.logger.error(
-          `Failed to send WhatsApp message: ${error.message}`,
-          error.stack,
-        );
+        this.logger.error(`Failed to send WhatsApp message: ${error.message}`, error.stack);
       }
 
       throw new Error(`WhatsApp send failed: ${error.message}`);

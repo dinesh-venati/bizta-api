@@ -36,7 +36,6 @@ async function main() {
       agentName: 'Bizta',
       autoReply: true,
       autoFollowup: true,
-      followupDelayHours: 24,
       followupMessageTemplate: "Hi! Just checking in 🙂 Let me know if you'd like to continue or have any questions.",
       businessName: 'Test Business',
     },

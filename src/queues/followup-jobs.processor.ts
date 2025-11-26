@@ -32,9 +32,7 @@ export class FollowupJobsProcessor extends WorkerHost {
   async process(job: Job<FollowupJobPayload>): Promise<void> {
     const { followupTaskId, orgId } = job.data;
 
-    this.logger.log(
-      `⏰ Processing followup job ${followupTaskId} for org ${orgId}`,
-    );
+    this.logger.log(`⏰ Processing followup job ${followupTaskId} for org ${orgId}`);
 
     try {
       // Load FollowupTask
@@ -111,9 +109,7 @@ export class FollowupJobsProcessor extends WorkerHost {
       }
 
       // All checks passed - send the followup message
-      this.logger.log(
-        `📤 Sending followup reminder to ${followupTask.customerPhone}`,
-      );
+      this.logger.log(`📤 Sending followup reminder to ${followupTask.customerPhone}`);
 
       // Send WhatsApp message
       const whatsappResponse = await this.messagingService.sendWhatsAppText({
@@ -135,9 +131,7 @@ export class FollowupJobsProcessor extends WorkerHost {
         },
       });
 
-      this.logger.log(
-        `✅ Followup message sent and stored: ${outboundMessage.id}`,
-      );
+      this.logger.log(`✅ Followup message sent and stored: ${outboundMessage.id}`);
 
       // Create an Event for the followup (for audit trail)
       const event = await this.prisma.event.create({
@@ -183,14 +177,9 @@ export class FollowupJobsProcessor extends WorkerHost {
         },
       });
 
-      this.logger.log(
-        `✅ Followup ${followupTaskId} completed successfully`,
-      );
+      this.logger.log(`✅ Followup ${followupTaskId} completed successfully`);
     } catch (error) {
-      this.logger.error(
-        `Failed to process followup ${followupTaskId}:`,
-        error.stack,
-      );
+      this.logger.error(`Failed to process followup ${followupTaskId}:`, error.stack);
 
       // Mark as FAILED
       await this.prisma.followupTask
@@ -205,10 +194,7 @@ export class FollowupJobsProcessor extends WorkerHost {
           },
         })
         .catch((updateError) => {
-          this.logger.error(
-            `Failed to update task status to FAILED:`,
-            updateError,
-          );
+          this.logger.error(`Failed to update task status to FAILED:`, updateError);
         });
 
       // Re-throw to mark job as failed in BullMQ

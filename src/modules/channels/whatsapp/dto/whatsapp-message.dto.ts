@@ -1,10 +1,4 @@
-import {
-  IsNotEmpty,
-  IsString,
-  ValidateNested,
-  IsOptional,
-  IsArray,
-} from 'class-validator';
+import { IsNotEmpty, IsString, ValidateNested, IsOptional, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class WhatsAppTextDto {

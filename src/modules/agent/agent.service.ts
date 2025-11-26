@@ -45,7 +45,13 @@ export class AgentService {
 
       // Handle MESSAGE_RECEIVED events
       if (event.type === 'MESSAGE_RECEIVED') {
-        await this.handleMessageReceived(event, settings);
+        await this.handleMessageReceived(event, {
+          autoReply: settings.autoReply,
+          agentName: settings.agentName,
+          autoFollowup: settings.autoFollowup,
+          followupDelayHours: settings.followupDelayHours,
+          followupMessageTemplate: settings.followupMessageTemplate,
+        });
       } else {
         this.logger.log(`Event type ${event.type} not handled yet`);
       }
@@ -64,8 +70,8 @@ export class AgentService {
    */
   private async handleMessageReceived(
     event: Event,
-    settings: { 
-      autoReply: boolean; 
+    settings: {
+      autoReply: boolean;
       agentName: string;
       autoFollowup: boolean;
       followupDelayHours: number;

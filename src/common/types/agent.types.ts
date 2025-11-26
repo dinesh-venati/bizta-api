@@ -12,14 +12,14 @@ export interface BiztaEvent {
   orgId: string;
   channelId?: string;
   conversationId?: string;
-  payload: any;
-  metadata?: Record<string, any>;
+  payload: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   timestamp: Date;
 }
 
 export interface LLMToolCall {
   toolName: string;
-  toolInput: any;
+  toolInput: Record<string, unknown>;
 }
 
 export interface LLMResponse {
@@ -32,8 +32,8 @@ export interface LLMResponse {
 export interface AgentContext {
   orgId: string;
   event: BiztaEvent;
-  settings: any;
-  conversation?: any;
-  recentMessages?: any[];
-  memory?: Record<string, any>;
+  settings: Record<string, unknown>;
+  conversation?: Record<string, unknown>;
+  recentMessages?: Array<Record<string, unknown>>;
+  memory?: Record<string, unknown>;
 }

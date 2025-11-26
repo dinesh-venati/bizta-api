@@ -210,11 +210,7 @@ Create a helpful summary with these metrics.`;
   /**
    * Fallback summary when LLM fails
    */
-  private getFallbackDailySummary(
-    orgName: string,
-    date: Date,
-    stats: DailyStats,
-  ): string {
+  private getFallbackDailySummary(orgName: string, date: Date, stats: DailyStats): string {
     const dateStr = date.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',

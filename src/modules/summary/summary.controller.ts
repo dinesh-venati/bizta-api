@@ -1,6 +1,5 @@
-import { Controller, Post, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Param } from '@nestjs/common';
 import { SummaryScheduler } from './summary.scheduler';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators';
 
 @Controller('dev/summary')

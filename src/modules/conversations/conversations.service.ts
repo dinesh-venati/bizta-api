@@ -22,8 +22,7 @@ export class ConversationsService {
     externalId?: string;
     customerName?: string;
   }): Promise<Conversation> {
-    const { orgId, channelType, customerPhone, externalId, customerName } =
-      params;
+    const { orgId, channelType, customerPhone, externalId, customerName } = params;
 
     // Find or create channel for this organization
     let channel = await this.prisma.channel.findFirst({
@@ -91,10 +90,7 @@ export class ConversationsService {
    * @param status - New status
    * @returns Updated conversation
    */
-  async updateStatus(
-    id: string,
-    status: ConversationStatus,
-  ): Promise<Conversation> {
+  async updateStatus(id: string, status: ConversationStatus): Promise<Conversation> {
     return this.prisma.conversation.update({
       where: { id },
       data: { status },

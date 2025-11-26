@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { EncryptionService } from '../../common/services/encryption.service';
 import { OrgsService } from '../orgs/orgs.service';
 import { RegisterDto, LoginDto } from './dto';
@@ -328,7 +329,7 @@ export class AuthService {
   /**
    * Generate unique slug for organization
    */
-  private async generateUniqueSlug(name: string, tx: any): Promise<string> {
+  private async generateUniqueSlug(name: string, tx: Prisma.TransactionClient): Promise<string> {
     const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { SummaryService } from './summary.service';
 import { LlmService } from '../llm/llm.service';
@@ -71,10 +71,7 @@ export class SummaryScheduler {
         `✅ Daily summary job completed: ${successCount} succeeded, ${errorCount} failed`,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to run daily summary job: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`Failed to run daily summary job: ${error.message}`, error.stack);
     }
   }
 
@@ -82,7 +79,12 @@ export class SummaryScheduler {
    * Process daily summary for a single organization
    * Can be called manually for testing
    */
-  async processDailySummaryForOrg(org: any): Promise<void> {
+  async processDailySummaryForOrg(org: {
+    id: string;
+    name: string;
+    settings: { dailySummaryEnabled: boolean; dailySummaryEmail: string | null } | null;
+    memberships: Array<{ user: { email: string } }>;
+  }): Promise<void> {
     const { id: orgId, name: orgName, settings, memberships } = org;
 
     this.logger.log(`Processing daily summary for org ${orgId} (${orgName})`);
@@ -135,7 +137,7 @@ export class SummaryScheduler {
         payload: {
           date: today.toISOString(),
           stats: JSON.parse(JSON.stringify(stats)), // Convert to plain object
-        } as any,
+        },
       },
     });
 
@@ -150,12 +152,12 @@ export class SummaryScheduler {
         toolInput: {
           orgId,
           date: today.toISOString(),
-        } as any,
+        },
         toolOutput: {
           emailTo: recipientEmail,
           stats: JSON.parse(JSON.stringify(stats)), // Convert to plain object
           summaryLength: summaryText.length,
-        } as any,
+        },
       },
     });
 

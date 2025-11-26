@@ -1,11 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DailyStats } from './interfaces/daily-stats.interface';
-import {
-  MessageDirection,
-  FollowupStatus,
-  ConversationStatus,
-} from '@prisma/client';
+import { MessageDirection, FollowupStatus, ConversationStatus } from '@prisma/client';
 
 @Injectable()
 export class SummaryService {
@@ -19,10 +15,7 @@ export class SummaryService {
    * @param date - Date to compute stats for (defaults to today)
    * @returns DailyStats object with aggregated metrics
    */
-  async getDailyStatsForOrg(
-    orgId: string,
-    date: Date = new Date(),
-  ): Promise<DailyStats> {
+  async getDailyStatsForOrg(orgId: string, date: Date = new Date()): Promise<DailyStats> {
     // Calculate start and end of day in UTC
     const startOfDay = new Date(date);
     startOfDay.setUTCHours(0, 0, 0, 0);
@@ -137,9 +130,7 @@ export class SummaryService {
 
     // Count conversations where last message was from customer (INBOUND)
     const conversationsNeedingHuman = openConversations.filter(
-      (conv) =>
-        conv.messages.length > 0 &&
-        conv.messages[0].direction === MessageDirection.INBOUND,
+      (conv) => conv.messages.length > 0 && conv.messages[0].direction === MessageDirection.INBOUND,
     ).length;
 
     const stats: DailyStats = {

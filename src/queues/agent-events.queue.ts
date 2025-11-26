@@ -4,7 +4,7 @@ export interface AgentEventJob {
   eventId: string;
   orgId: string;
   type: EventType;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export const AGENT_EVENTS_QUEUE = 'agent-events';

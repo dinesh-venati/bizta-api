@@ -2,11 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import {
-  FollowupChannel,
-  FollowupType,
-  FollowupStatus,
-} from '@prisma/client';
+import { FollowupChannel, FollowupType, FollowupStatus } from '@prisma/client';
 
 export interface ScheduleCustomerFollowupParams {
   orgId: string;
@@ -27,14 +23,7 @@ export class FollowupService {
   ) {}
 
   async scheduleCustomerFollowup(params: ScheduleCustomerFollowupParams) {
-    const {
-      orgId,
-      conversationId,
-      customerPhone,
-      channel,
-      delayHours,
-      messageTemplate,
-    } = params;
+    const { orgId, conversationId, customerPhone, channel, delayHours, messageTemplate } = params;
 
     // Check if there's already a PENDING followup for this conversation
     const existingPending = await this.prisma.followupTask.findFirst({
@@ -45,9 +34,7 @@ export class FollowupService {
     });
 
     if (existingPending) {
-      this.logger.debug(
-        `Followup already scheduled for conversation ${conversationId}, skipping`,
-      );
+      this.logger.debug(`Followup already scheduled for conversation ${conversationId}, skipping`);
       return existingPending;
     }
 
@@ -58,14 +45,11 @@ export class FollowupService {
 
     const defaultTemplate =
       "Hi, just checking in 🙂 let me know if you'd like to continue or have any questions.";
-    const finalTemplate =
-      messageTemplate ||
-      settings?.followupMessageTemplate ||
-      defaultTemplate;
+    const finalTemplate = messageTemplate || settings?.followupMessageTemplate || defaultTemplate;
 
     // Calculate scheduled time
     const scheduledAt = new Date();
-    scheduledAt.setTime(scheduledAt.getTime() + (delayHours * 60 * 60 * 1000));
+    scheduledAt.setTime(scheduledAt.getTime() + delayHours * 60 * 60 * 1000);
 
     // Create FollowupTask
     const followupTask = await this.prisma.followupTask.create({
@@ -99,9 +83,7 @@ export class FollowupService {
       },
     );
 
-    this.logger.debug(
-      `Enqueued followup job ${followupTask.id} with delay ${delayMs}ms`,
-    );
+    this.logger.debug(`Enqueued followup job ${followupTask.id} with delay ${delayMs}ms`);
 
     return followupTask;
   }
@@ -141,12 +123,7 @@ export class FollowupService {
     });
   }
 
-  async updateTaskStatus(
-    id: string,
-    status: FollowupStatus,
-    sentAt?: Date,
-    error?: string,
-  ) {
+  async updateTaskStatus(id: string, status: FollowupStatus, sentAt?: Date, error?: string) {
     return this.prisma.followupTask.update({
       where: { id },
       data: {

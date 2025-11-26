@@ -75,10 +75,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SettingsModule,
     AuditModule,
     WhatsAppModule,
-    
+
     // Queues
     QueuesModule,
-    
+
     // Summary & Notifications
     SummaryModule,
     NotificationsModule,

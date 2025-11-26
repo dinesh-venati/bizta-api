@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Bizta Digital COO API",
-    "description": "Complete API collection for Bizta - AI Digital COO Backend\n\n## Setup\n1. Import this collection into Postman\n2. Set the `baseUrl` variable to `http://localhost:3000/api/v1`\n3. After login/register, the access token is automatically saved to `accessToken` variable\n4. Protected endpoints use the `accessToken` automatically\n\n## Authentication Flow\n1. **Register** → Creates user + organization → Returns tokens\n2. **Login** → Returns access + refresh tokens\n3. **Get Current User** → Use access token to get user info\n4. **Refresh Token** → Get new access token using refresh token\n\n## Task 4: AI-Powered WhatsApp Replies\nThe WhatsApp webhook now triggers full AI automation:\n1. Message received → Conversation created/found\n2. Inbound message stored in DB\n3. OpenAI LLM generates reply\n4. Reply sent via WhatsApp Cloud API\n5. Outbound message stored in DB\n6. AgentAction logged (type: REPLY)\n\n## Variables\n- `baseUrl`: http://localhost:3000/api/v1\n- `accessToken`: (auto-set after login/register)\n- `refreshToken`: (auto-set after login/register)\n- `webhookVerifyToken`: your-webhook-verify-token\n- `webhookSecret`: your-webhook-secret",
+    "description": "Complete API collection for Bizta - AI Digital COO Backend\n\n## Setup\n1. Import this collection into Postman\n2. Set the `baseUrl` variable to `http://localhost:3000/api/v1`\n3. After login/register, the access token is automatically saved to `accessToken` variable\n4. Protected endpoints use the `accessToken` automatically\n\n## Authentication Flow\n1. **Register** → Creates user + organization → Returns tokens\n2. **Login** → Returns access + refresh tokens\n3. **Get Current User** → Use access token to get user info\n4. **Refresh Token** → Get new access token using refresh token\n\n## Task 4: AI-Powered WhatsApp Replies\nThe WhatsApp webhook now triggers full AI automation:\n1. Message received → Conversation created/found\n2. Inbound message stored in DB\n3. OpenAI LLM generates reply\n4. Reply sent via WhatsApp Cloud API\n5. Outbound message stored in DB\n6. AgentAction logged (type: REPLY)\n\n## Task 5: Smart Follow-Up System\nAutomatic follow-ups for inactive conversations:\n1. Follow-up task scheduled (configurable delay)\n2. Cancelled automatically if customer replies\n3. Sent via BullMQ delayed jobs\n4. Full audit trail (Event + AgentAction + Message)\n\n## Task 6: Daily Summary Reports\nCOO-style daily summaries with AI:\n1. Daily stats aggregation (7 metrics)\n2. LLM-generated professional summary\n3. Email delivery to organization owner\n4. Automated via cron (21:30 UTC) or manual trigger\n\n## Variables\n- `baseUrl`: http://localhost:3000/api/v1\n- `accessToken`: (auto-set after login/register)\n- `refreshToken`: (auto-set after login/register)\n- `orgId`: (set manually for testing)\n- `webhookVerifyToken`: your-webhook-verify-token\n- `webhookSecret`: your-webhook-secret",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "bizta-digital-coo"
   },
@@ -697,6 +697,88 @@
         }
       ],
       "description": "WhatsApp webhook endpoints for receiving messages.\n\n## Overview\nThese endpoints handle incoming WhatsApp messages from Meta's webhook system.\n\n## Task 4 Integration\nWhen a message is received, the system now:\n1. **Creates/Finds Conversation** - Auto-creates WhatsApp channel if needed\n2. **Stores Inbound Message** - Direction: INBOUND, with metadata\n3. **Generates AI Reply** - Uses OpenAI LLM (GPT-4) with business context\n4. **Sends WhatsApp Reply** - Via WhatsApp Cloud API\n5. **Stores Outbound Message** - Direction: OUTBOUND\n6. **Logs AgentAction** - Type: REPLY, Status: COMPLETED\n\n## Setup\n1. Set collection variables:\n   - `webhookVerifyToken` - Your verification token\n   - `webhookSecret` - Your webhook secret\n2. Update .env file:\n   - `WHATSAPP_PHONE_NUMBER_ID` - From Meta Developer Console\n   - `WHATSAPP_ACCESS_TOKEN` - From Meta Developer Console\n   - `OPENAI_API_KEY` - Your OpenAI API key\n3. Test verification endpoint\n4. Test message receipt (will trigger AI reply)\n\n## Expected Logs\nWhen you POST a message, check server logs:\n```\n🤖 Agent received event <uuid> (MESSAGE_RECEIVED)\n📨 Message from 14155238886: \"Hello!\" (id: wamid...)\n💬 Conversation: <uuid>\n📥 Stored inbound message: <uuid>\n🧠 LLM generated reply: \"Hi! How can I help you?\"\n📤 WhatsApp reply sent to 14155238886\n📤 Stored outbound message: <uuid>\n✅ AgentAction created for event <uuid>\n✅ Event <uuid> processed successfully\n```\n\n## Verify in Database\nUse Prisma Studio (`npx prisma studio`):\n- **Conversations** - New conversation with channelId, customerPhone\n- **Messages** - 2 messages (1 INBOUND, 1 OUTBOUND)\n- **AgentActions** - 1 action (type: REPLY, status: COMPLETED)\n- **Channels** - Auto-created WhatsApp channel\n- **Events** - Event status: COMPLETED\n\n## Security\n- Webhook verification uses verify token\n- Message receipt uses HMAC SHA256 signature\n- Both endpoints are public (no JWT required)\n\n## Flow\n```\nWhatsApp → Meta → POST /webhooks/whatsapp\n  → Verify signature\n  → Create Event (DB)\n  → Enqueue to Redis\n  → Agent processes:\n      → Find/Create Conversation + Channel\n      → Store inbound Message\n      → Generate LLM reply (OpenAI)\n      → Send via WhatsApp Cloud API\n      → Store outbound Message\n      → Create AgentAction\n  → Event marked COMPLETED\n```"
+    },
+    {
+      "name": "Dev - Daily Summary",
+      "item": [
+        {
+          "name": "Trigger Daily Summary (Single Org)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dev/summary/trigger/{{orgId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "summary", "trigger", "{{orgId}}"]
+            },
+            "description": "**Task 6: Daily Summary - Manual Trigger**\n\nManually trigger daily summary for a specific organization (testing endpoint).\n\n## What It Does\n1. Fetches organization settings and owner\n2. Computes daily stats (7 metrics):\n   - Total conversations today\n   - New conversations today\n   - Messages from customers\n   - Messages from Bizta\n   - Follow-ups scheduled\n   - Follow-ups sent\n   - Conversations needing human attention\n3. Generates AI summary using OpenAI (COO-style)\n4. Sends email (console-logged in dev)\n5. Creates Event (DAILY_SUMMARY)\n6. Creates AgentAction (DAILY_SUMMARY_SENT)\n\n## Setup\n1. Set `orgId` variable to your organization ID\n2. Ensure some activity exists for today\n3. Check server logs for email output\n\n## Expected Response\n```json\n{\n  \"status\": \"ok\",\n  \"message\": \"Daily summary triggered for org <orgId>\"\n}\n```\n\n## Expected Logs\n```\n[SummaryScheduler] Manually triggering daily summary for org <orgId>\n[SummaryScheduler] Processing daily summary for org <orgId> (Your Org)\n[SummaryService] Computing daily stats...\n[LlmService] Generating daily summary...\n[LlmService] LLM generated daily summary (719 chars)\n[NotificationsService] 📧 Sending daily summary email to owner@example.com\n[NotificationsService] ========================================\n[NotificationsService] 📨 EMAIL (Development Mode)\n[NotificationsService] ========================================\n[NotificationsService] To: owner@example.com\n[NotificationsService] Subject: Daily Summary for Your Org - November 26, 2025\n[NotificationsService] ----------------------------------------\n[NotificationsService] <AI-generated summary with metrics>\n[NotificationsService] ========================================\n[SummaryScheduler] ✅ Daily summary sent for org <orgId>\n```\n\n## Database Records\n- **Events**: Type DAILY_SUMMARY, Status COMPLETED\n- **AgentActions**: Type DAILY_SUMMARY_SENT, Status COMPLETED"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/dev/summary/trigger/590223f8-0484-485f-88ee-ec2235455533",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["dev", "summary", "trigger", "590223f8-0484-485f-88ee-ec2235455533"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\",\n  \"message\": \"Daily summary triggered for org 590223f8-0484-485f-88ee-ec2235455533\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Trigger Daily Summary (All Orgs)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dev/summary/trigger-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "summary", "trigger-all"]
+            },
+            "description": "**Task 6: Daily Summary - Trigger All Organizations**\n\nManually trigger daily summary for ALL active organizations (testing endpoint).\n\n## What It Does\n1. Fetches all active organizations\n2. For each org (with error isolation):\n   - Checks if dailySummaryEnabled = true\n   - Computes stats and generates summary\n   - Sends email to owner\n   - Creates audit records\n3. Reports success/failure counts\n\n## Use Cases\n- Testing the full cron job logic\n- Verifying multi-org processing\n- Testing error isolation (one org failure doesn't stop others)\n\n## Expected Response\n```json\n{\n  \"status\": \"ok\",\n  \"message\": \"Daily summaries triggered for all organizations\"\n}\n```\n\n## Expected Logs\n```\n[SummaryScheduler] 🔄 Starting daily summary job...\n[SummaryScheduler] Found 3 active organization(s)\n[SummaryScheduler] Processing daily summary for org <id1> (Org 1)...\n[SummaryScheduler] ✅ Daily summary sent for org <id1>\n[SummaryScheduler] Processing daily summary for org <id2> (Org 2)...\n[SummaryScheduler] ✅ Daily summary sent for org <id2>\n[SummaryScheduler] Processing daily summary for org <id3> (Org 3)...\n[SummaryScheduler] Daily summary disabled for org <id3>, skipping\n[SummaryScheduler] ✅ Daily summary job completed: 2 succeeded, 0 failed\n```\n\n## Notes\n- This simulates the automated cron job\n- Cron job runs daily at 21:30 UTC\n- Can be customized via DAILY_SUMMARY_CRON env var"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/dev/summary/trigger-all",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["dev", "summary", "trigger-all"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\",\n  \"message\": \"Daily summaries triggered for all organizations\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "**Task 6: Daily Summary System - Testing Endpoints**\n\n## Overview\nThese endpoints allow manual triggering of daily summary reports for testing purposes.\n\n## Features\n- **7 Daily Metrics**: Conversations, messages, follow-ups, needs attention\n- **AI-Generated Summaries**: COO-style professional reports using GPT-4o-mini\n- **Email Delivery**: Console-logged in dev, ready for SMTP in production\n- **Automated Cron**: Runs daily at 21:30 UTC (configurable)\n- **Full Audit Trail**: Event + AgentAction records\n\n## Metrics Tracked\n1. **Total Conversations Today** - Active or created today\n2. **New Conversations Today** - Created today only\n3. **Messages from Customers** - INBOUND direction\n4. **Messages from Bizta** - OUTBOUND direction\n5. **Follow-ups Scheduled** - Created today\n6. **Follow-ups Sent** - Sent today (status: SENT)\n7. **Conversations Needing Human** - OPEN + last INBOUND message > 2 hours\n\n## Summary Content\nAI generates a 2-4 paragraph report including:\n- Key metrics summary\n- Issues requiring attention\n- Actionable suggestions\n- Professional, encouraging tone\n\n## Email Format (Dev)\n```\n========================================\n📨 EMAIL (Development Mode)\n========================================\nTo: owner@example.com\nSubject: Daily Summary for Your Organization - November 26, 2025\n----------------------------------------\n**Daily Summary Report - Tuesday, November 26, 2025**\n\nToday, we had a total of 3 active conversations, with 2 new \nconversations initiated. Customer engagement remains steady...\n\n[AI-generated insights and suggestions]\n========================================\n```\n\n## Production Setup\n1. Add SMTP credentials to .env:\n   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS\n   - EMAIL_FROM\n2. Uncomment real email code in NotificationsService\n3. Summaries sent automatically at 21:30 UTC\n\n## Configuration\n**Settings Model Fields:**\n- `dailySummaryEnabled` (Boolean) - Enable/disable summaries\n- `dailySummaryEmail` (String) - Override recipient email\n- `dailySummaryTime` (String) - Future: custom send time\n\n**Environment Variables:**\n- `DAILY_SUMMARY_CRON` - Custom cron schedule (default: '30 21 * * *')\n- `OPENAI_API_KEY` - Required for AI summary generation\n- `LLM_MODEL` - Default: gpt-4o-mini\n\n## Testing Workflow\n1. Create some activity (messages, conversations)\n2. Trigger manual summary for your org\n3. Check server logs for email output\n4. Verify Event and AgentAction in database\n5. Adjust settings if needed\n\n## Security\n- Endpoints are public (@Public decorator)\n- No JWT required for testing\n- Production: Consider adding auth or removing endpoints"
     }
   ],
   "variable": [
@@ -728,6 +810,11 @@
     {
       "key": "calculatedSignature",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orgId",
+      "value": "590223f8-0484-485f-88ee-ec2235455533",
       "type": "string"
     }
   ]
