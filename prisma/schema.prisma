@@ -244,6 +244,7 @@ enum AgentActionType {
   REPLY
   FOLLOWUP_SENT
   FOLLOWUP
+  DAILY_SUMMARY_SENT
   SUMMARY
   WEB_CHECK
   ESCALATE
@@ -307,6 +308,7 @@ model Settings {
   followupMessageTemplate String? @db.Text
   dailySummaryEnabled Boolean @default(true)
   dailySummaryTime    String  @default("09:00") // HH:mm format
+  dailySummaryEmail   String? // Override email for daily summaries (defaults to owner email)
 
   // Business context
   businessName        String?
