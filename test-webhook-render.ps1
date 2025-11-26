@@ -22,12 +22,12 @@ $payload = @{
                                 profile = @{
                                     name = "Test User"
                                 }
-                                wa_id = "16315551181"
+                                wa_id = "918310420529"
                             }
                         )
                         messages = @(
                             @{
-                                from = "16315551181"
+                                from = "918310420529"
                                 id = "wamid.test123"
                                 timestamp = "1732604400"
                                 type = "text"

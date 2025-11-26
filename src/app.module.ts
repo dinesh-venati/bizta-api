@@ -23,6 +23,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { WhatsAppModule } from './modules/channels/whatsapp/whatsapp.module';
 import { AgentEventsProcessor } from './queues/agent-events.processor';
+import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [
@@ -72,6 +73,9 @@ import { AgentEventsProcessor } from './queues/agent-events.processor';
     SettingsModule,
     AuditModule,
     WhatsAppModule,
+    
+    // Queues
+    QueuesModule,
   ],
   providers: [
     // Queue processors

@@ -5,6 +5,7 @@ import { LlmModule } from '@/modules/llm/llm.module';
 import { MessagingModule } from '@/modules/skills/messaging/messaging.module';
 import { ConversationsModule } from '@/modules/conversations/conversations.module';
 import { MessagesModule } from '@/modules/messages/messages.module';
+import { FollowupModule } from '@/modules/skills/followup/followup.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MessagesModule } from '@/modules/messages/messages.module';
     MessagingModule,
     ConversationsModule,
     MessagesModule,
+    FollowupModule,
   ],
   providers: [AgentService],
   exports: [AgentService],

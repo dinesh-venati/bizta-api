@@ -5,6 +5,7 @@ import { LlmService } from '@/modules/llm/llm.service';
 import { MessagingService } from '@/modules/skills/messaging/messaging.service';
 import { ConversationsService } from '@/modules/conversations/conversations.service';
 import { MessagesService } from '@/modules/messages/messages.service';
+import { FollowupService } from '@/modules/skills/followup/followup.service';
 
 @Injectable()
 export class AgentService {
@@ -16,6 +17,7 @@ export class AgentService {
     private readonly messaging: MessagingService,
     private readonly conversations: ConversationsService,
     private readonly messages: MessagesService,
+    private readonly followup: FollowupService,
   ) {}
 
   /**
@@ -62,7 +64,13 @@ export class AgentService {
    */
   private async handleMessageReceived(
     event: Event,
-    settings: { autoReply: boolean; agentName: string },
+    settings: { 
+      autoReply: boolean; 
+      agentName: string;
+      autoFollowup: boolean;
+      followupDelayHours: number;
+      followupMessageTemplate?: string | null;
+    },
   ): Promise<void> {
     // Parse event payload
     const payload = event.payload as Prisma.JsonObject;
@@ -158,6 +166,25 @@ export class AgentService {
     });
 
     this.logger.log(`✅ AgentAction created for event ${event.id}`);
+
+    // 7. Schedule followup reminder if enabled
+    if (settings.autoFollowup && settings.followupDelayHours > 0) {
+      try {
+        await this.followup.scheduleCustomerFollowup({
+          orgId: event.orgId,
+          conversationId: conversation.id,
+          customerPhone: from,
+          channel: 'whatsapp',
+          delayHours: settings.followupDelayHours,
+          messageTemplate: settings.followupMessageTemplate || undefined,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to schedule followup for conversation ${conversation.id}: ${error.message}`,
+        );
+        // Don't fail the whole event if followup scheduling fails
+      }
+    }
   }
 
   /**

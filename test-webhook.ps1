@@ -2,8 +2,8 @@
 # Tests webhook verification and message receipt
 
 $baseUrl = "http://localhost:3000/api/v1"
-$verifyToken = "your-webhook-verify-token"
-$webhookSecret = "your-webhook-secret"
+$verifyToken = "bizta_verify_123"
+$webhookSecret = "46700f12a53ac58ca4ee146c9e18b39b"
 
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host "WhatsApp Webhook Integration Test" -ForegroundColor Cyan
@@ -47,7 +47,7 @@ $webhookPayload = @{
                         messaging_product = "whatsapp"
                         messages = @(
                             @{
-                                from = "1234567890"
+                                from = "918310420529"
                                 id = "wamid.test123"
                                 timestamp = "1700000000"
                                 type = "text"

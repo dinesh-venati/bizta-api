@@ -46,6 +46,7 @@ model Organization {
   skillConfigs  SkillConfig[]
   apiKeys       ApiKey[]
   webhookLogs   WebhookLog[]
+  followupTasks FollowupTask[]
 
   @@map("organizations")
 }
@@ -144,6 +145,7 @@ model Conversation {
 
   messages     Message[]
   agentActions AgentAction[]
+  followupTasks FollowupTask[]
 
   @@unique([orgId, channelId, externalId])
   @@index([orgId, status])
@@ -240,6 +242,7 @@ model Event {
 
 enum AgentActionType {
   REPLY
+  FOLLOWUP_SENT
   FOLLOWUP
   SUMMARY
   WEB_CHECK
@@ -300,6 +303,8 @@ model Settings {
   agentPersonality    String? @db.Text
   autoReply           Boolean @default(true)
   autoFollowup        Boolean @default(true)
+  followupDelayHours  Float   @default(24)
+  followupMessageTemplate String? @db.Text
   dailySummaryEnabled Boolean @default(true)
   dailySummaryTime    String  @default("09:00") // HH:mm format
 
@@ -396,4 +401,51 @@ model WebhookLog {
   @@index([orgId])
   @@index([source, createdAt])
   @@map("webhook_logs")
+}
+
+// ============================================
+// FOLLOWUP TASKS (Automatic Reminders)
+// ============================================
+
+enum FollowupChannel {
+  WHATSAPP
+  EMAIL
+  WEBCHAT
+}
+
+enum FollowupType {
+  CUSTOMER_REMINDER
+  OWNER_REMINDER
+}
+
+enum FollowupStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+model FollowupTask {
+  id              String          @id @default(cuid())
+  customerPhone   String
+  channel         FollowupChannel
+  type            FollowupType
+  status          FollowupStatus  @default(PENDING)
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  messageTemplate String          @db.Text
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, status])
+  @@index([conversationId, status])
+  @@index([scheduledAt, status])
+  @@map("followup_tasks")
 }

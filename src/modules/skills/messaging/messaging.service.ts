@@ -33,7 +33,7 @@ export class MessagingService {
   /**
    * Send a text message via WhatsApp Cloud API
    */
-  async sendWhatsAppText(params: SendWhatsAppTextParams): Promise<void> {
+  async sendWhatsAppText(params: SendWhatsAppTextParams): Promise<{ messageId: string }> {
     const { to, text, orgId, metadata } = params;
 
     this.logger.log(
@@ -66,9 +66,13 @@ export class MessagingService {
         );
       }
 
+      const messageId = response.data.messages?.[0]?.id || 'unknown';
+
       this.logger.log(
-        `✅ WhatsApp message sent successfully to ${to} (messageId: ${response.data.messages?.[0]?.id || 'unknown'})`,
+        `✅ WhatsApp message sent successfully to ${to} (messageId: ${messageId})`,
       );
+
+      return { messageId };
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
