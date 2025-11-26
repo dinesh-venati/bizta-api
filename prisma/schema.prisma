@@ -119,6 +119,14 @@ model Channel {
 // CONVERSATIONS & MESSAGES
 // ============================================
 
+enum ConversationIntent {
+  LEAD
+  SUPPORT
+  SPAM
+  GREETING
+  OTHER
+}
+
 enum ConversationStatus {
   OPEN
   CLOSED
@@ -134,6 +142,13 @@ model Conversation {
   customerEmail String?
   lastMessageAt DateTime?
   metadata      Json?
+  
+  // Lead Qualification (Task 7)
+  intent        ConversationIntent?
+  subIntent     String? // e.g., "pricing", "booking", "demo", "product_info"
+  leadScore     Int? // 0-100
+  requiresHuman Boolean? @default(false)
+  
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
@@ -245,6 +260,8 @@ enum AgentActionType {
   FOLLOWUP_SENT
   FOLLOWUP
   DAILY_SUMMARY_SENT
+  LEAD_QUALIFIED
+  CONVERSATION_TAG_UPDATED
   SUMMARY
   WEB_CHECK
   ESCALATE

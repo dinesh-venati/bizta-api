@@ -13,6 +13,11 @@ export function verifyWhatsAppSignature(
   signature: string | undefined,
   secret: string,
 ): void {
+  // Skip signature verification in development mode
+  if (process.env.NODE_ENV === 'development') {
+    return;
+  }
+
   if (!signature) {
     throw new UnauthorizedException('Missing signature header');
   }

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
-import { Conversation, ConversationStatus } from '@prisma/client';
+import {
+  Conversation,
+  ConversationStatus,
+  ConversationIntent,
+  MessageDirection,
+} from '@prisma/client';
 
 @Injectable()
 export class ConversationsService {
@@ -95,5 +100,52 @@ export class ConversationsService {
       where: { id },
       data: { status },
     });
+  }
+
+  /**
+   * Update conversation classification (Task 7)
+   */
+  async updateClassification(params: {
+    conversationId: string;
+    intent?: ConversationIntent;
+    subIntent?: string;
+    leadScore?: number;
+    requiresHuman?: boolean;
+  }): Promise<Conversation> {
+    const { conversationId, intent, subIntent, leadScore, requiresHuman } = params;
+
+    return this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        intent,
+        subIntent,
+        leadScore,
+        requiresHuman,
+      },
+    });
+  }
+
+  /**
+   * Get recent messages for conversation in simple format (Task 7)
+   */
+  async getRecentMessagesForConversation(
+    conversationId: string,
+    limit: number = 5,
+  ): Promise<Array<{ from: 'customer' | 'bizta'; text: string }>> {
+    const messages = await this.prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        direction: true,
+        content: true,
+      },
+    });
+
+    // Reverse to get chronological order
+    return messages.reverse().map((msg) => ({
+      from: msg.direction === MessageDirection.INBOUND ? 'customer' : 'bizta',
+      text: msg.content,
+    }));
   }
 }

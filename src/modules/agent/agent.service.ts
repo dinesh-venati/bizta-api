@@ -93,7 +93,7 @@ export class AgentService {
     }
 
     // 1. Find or create conversation
-    const conversation = await this.conversations.findOrCreateByContact({
+    let conversation = await this.conversations.findOrCreateByContact({
       orgId: event.orgId,
       channelType: 'whatsapp',
       customerPhone: from,
@@ -115,7 +115,97 @@ export class AgentService {
 
     this.logger.log(`📥 Stored inbound message: ${inboundMessage.id}`);
 
-    // 3. Generate reply using LLM
+    // Cancel any pending followups since customer replied
+    try {
+      await this.followup.cancelFollowupForConversation(conversation.id);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to cancel followup for conversation ${conversation.id}: ${error.message}`,
+      );
+      // Continue processing even if cancellation fails
+    }
+
+    // 3. Classify conversation and qualify lead (Task 7)
+    const recentMessages = await this.conversations.getRecentMessagesForConversation(
+      conversation.id,
+      6,
+    );
+
+    const classification = await this.llm.classifyConversation({
+      orgName: settings.agentName || 'Bizta',
+      businessDescription: settings.agentName || 'Bizta',
+      recentMessages,
+    });
+
+    this.logger.log(
+      `🏷️  Classification: ${classification.intent} (score: ${classification.leadScore}, subIntent: ${classification.subIntent})`,
+    );
+
+    // Map intent to enum
+    const intentMap: Record<string, 'LEAD' | 'SUPPORT' | 'SPAM' | 'GREETING' | 'OTHER'> = {
+      lead: 'LEAD',
+      support: 'SUPPORT',
+      spam: 'SPAM',
+      greeting: 'GREETING',
+      other: 'OTHER',
+    };
+
+    const conversationIntent = intentMap[classification.intent] || 'OTHER';
+
+    // Update conversation with classification
+    await this.conversations.updateClassification({
+      conversationId: conversation.id,
+      intent: conversationIntent,
+      subIntent: classification.subIntent,
+      leadScore: classification.leadScore,
+      requiresHuman: classification.requiresHuman,
+    });
+
+    // Refetch conversation to get updated fields
+    conversation = await this.prisma.conversation.findUniqueOrThrow({
+      where: { id: conversation.id },
+    });
+
+    // Create AgentAction for classification
+    await this.prisma.agentAction.create({
+      data: {
+        orgId: event.orgId,
+        eventId: event.id,
+        conversationId: conversation.id,
+        type: 'LEAD_QUALIFIED',
+        status: 'COMPLETED',
+        toolName: 'LlmService.classifyConversation',
+        toolInput: {
+          messagesAnalyzed: recentMessages.length,
+        } as Prisma.JsonObject,
+        toolOutput: {
+          intent: classification.intent,
+          subIntent: classification.subIntent,
+          leadScore: classification.leadScore,
+          requiresHuman: classification.requiresHuman,
+          reasoning: classification.reasoning,
+        } as Prisma.JsonObject,
+      },
+    });
+
+    // Check if human intervention is required
+    if (classification.requiresHuman) {
+      this.logger.warn(
+        `⚠️  Conversation ${conversation.id} flagged as requiresHuman for org ${event.orgId}`,
+      );
+      // TODO: Add alert mechanism in future task
+    }
+
+    // Skip processing for spam
+    if (
+      classification.intent === 'spam' ||
+      (classification.leadScore && classification.leadScore < 25)
+    ) {
+      this.logger.log('🚫 Skipping reply and followup for spam/low-quality message');
+      return;
+    }
+
+    // 4. Generate reply using LLM
     const replyText = await this.llm.generateReplyForMessage({
       orgId: event.orgId,
       messageText,
@@ -140,7 +230,7 @@ export class AgentService {
 
     this.logger.log(`📤 WhatsApp reply sent to ${from}`);
 
-    // 5. Store outbound message
+    // 5. Store the outbound message
     const outboundMessage = await this.messages.create({
       conversationId: conversation.id,
       orgId: event.orgId,
@@ -151,7 +241,7 @@ export class AgentService {
 
     this.logger.log(`📤 Stored outbound message: ${outboundMessage.id}`);
 
-    // 6. Create AgentAction record
+    // 6. Create reply AgentAction record
     await this.prisma.agentAction.create({
       data: {
         orgId: event.orgId,
@@ -173,15 +263,26 @@ export class AgentService {
 
     this.logger.log(`✅ AgentAction created for event ${event.id}`);
 
-    // 7. Schedule followup reminder if enabled
+    // 7. Schedule followup reminder if enabled (shorter delay for hot leads)
     if (settings.autoFollowup && settings.followupDelayHours > 0) {
+      // Use half delay for hot leads (leadScore >= 80)
+      const isHotLead = conversation.leadScore !== null && conversation.leadScore >= 80;
+      const effectiveDelay = isHotLead
+        ? Math.max(1, settings.followupDelayHours / 2)
+        : settings.followupDelayHours;
+
+      if (isHotLead) {
+        this.logger.log(
+          `🔥 Hot lead detected (score: ${conversation.leadScore}), using ${effectiveDelay}h followup delay`,
+        );
+      }
       try {
         await this.followup.scheduleCustomerFollowup({
           orgId: event.orgId,
           conversationId: conversation.id,
           customerPhone: from,
           channel: 'whatsapp',
-          delayHours: settings.followupDelayHours,
+          delayHours: effectiveDelay,
           messageTemplate: settings.followupMessageTemplate || undefined,
         });
       } catch (error) {

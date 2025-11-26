@@ -16,6 +16,20 @@ export interface GenerateDailySummaryParams {
   stats: DailyStats;
 }
 
+export interface ClassifyConversationParams {
+  orgName: string;
+  businessDescription?: string;
+  recentMessages: Array<{ from: 'customer' | 'bizta'; text: string }>;
+}
+
+export interface ConversationClassification {
+  intent: 'lead' | 'support' | 'spam' | 'greeting' | 'other';
+  subIntent?: string;
+  leadScore?: number;
+  requiresHuman?: boolean;
+  reasoning?: string;
+}
+
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
@@ -227,5 +241,150 @@ Today's Activity:
 • ${stats.followupsSentToday} follow-up reminders sent
 
 ${stats.conversationsNeedingHuman > 0 ? `⚠️ ${stats.conversationsNeedingHuman} conversations may need your attention.\n\n` : ''}Keep up the great work! 🚀`;
+  }
+
+  /**
+   * Classify conversation intent and qualify lead (Task 7)
+   */
+  async classifyConversation(
+    params: ClassifyConversationParams,
+  ): Promise<ConversationClassification> {
+    const { orgName, businessDescription, recentMessages } = params;
+
+    this.logger.log(
+      `Classifying conversation for ${orgName} with ${recentMessages.length} messages`,
+    );
+
+    try {
+      // Build system prompt for classification
+      const systemPrompt = `You are Bizta's lead qualification engine for ${orgName}.
+${businessDescription ? `Business: ${businessDescription}\n` : ''}
+Your task: Analyze the conversation and classify it with strict JSON output.
+
+Classification Rules:
+- intent: Must be one of: "lead", "support", "spam", "greeting", "other"
+  • "lead" = Customer expressing interest in products/services, asking about pricing, booking, demo
+  • "support" = Existing customer needing help, asking questions about usage
+  • "spam" = Promotional content, irrelevant messages, automated bots
+  • "greeting" = Simple hi/hello with no clear intent yet
+  • "other" = Unclear or mixed intent
+
+- subIntent: Short snake_case tag describing specific need. Examples:
+  • For leads: "pricing", "booking", "demo", "product_info", "bulk_order"
+  • For support: "complaint", "refund", "onboarding", "feature_request", "bug_report"
+  • For other: "chit_chat", "feedback", "question"
+
+- leadScore: Integer 0-100 based on:
+  • 0-20: Spam or irrelevant
+  • 20-40: Low quality (vague interest, no budget indication)
+  • 40-60: Lukewarm lead (some interest but not committed)
+  • 60-80: Good lead (clear interest, asking specific questions)
+  • 80-100: Hot lead (ready to buy, asking for pricing/booking, urgency)
+
+- requiresHuman: true if:
+  • Customer is angry, frustrated, or confused
+  • Complex negotiation needed
+  • Explicitly asks for human agent
+  • Escalation keywords present
+
+- reasoning: Brief explanation (1-2 sentences) for your classification
+
+CRITICAL: Respond ONLY with valid JSON. No markdown, no explanations outside JSON.`;
+
+      const messagesContext = recentMessages
+        .map((msg) => `${msg.from === 'customer' ? 'Customer' : 'Bizta'}: ${msg.text}`)
+        .join('\n');
+
+      const completion = await this.openai.chat.completions.create({
+        model: this.defaultModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: `Classify this conversation:\n\n${messagesContext}\n\nRespond with JSON only.`,
+          },
+        ],
+        temperature: 0.3, // Lower temp for more consistent classification
+        max_tokens: 300,
+      });
+
+      const responseText = completion.choices[0]?.message?.content?.trim();
+
+      if (!responseText) {
+        throw new Error('Empty response from LLM');
+      }
+
+      this.logger.debug(`LLM classification response: ${responseText}`);
+
+      // Parse JSON response
+      let classification: ConversationClassification;
+
+      try {
+        // Try to extract JSON if wrapped in markdown
+        let jsonText = responseText;
+        if (responseText.includes('```json')) {
+          const match = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+          if (match) {
+            jsonText = match[1];
+          }
+        } else if (responseText.includes('```')) {
+          const match = responseText.match(/```\s*([\s\S]*?)\s*```/);
+          if (match) {
+            jsonText = match[1];
+          }
+        }
+
+        classification = JSON.parse(jsonText);
+
+        // Validate and sanitize
+        if (
+          !classification.intent ||
+          !['lead', 'support', 'spam', 'greeting', 'other'].includes(classification.intent)
+        ) {
+          throw new Error(`Invalid intent: ${classification.intent}`);
+        }
+
+        // Ensure leadScore is 0-100
+        if (classification.leadScore !== undefined) {
+          classification.leadScore = Math.max(
+            0,
+            Math.min(100, Math.floor(classification.leadScore)),
+          );
+        }
+
+        // Default requiresHuman to false if not specified
+        if (classification.requiresHuman === undefined) {
+          classification.requiresHuman = false;
+        }
+
+        this.logger.log(
+          `Classification: ${classification.intent} (score: ${classification.leadScore}, human: ${classification.requiresHuman})`,
+        );
+
+        return classification;
+      } catch (parseError) {
+        this.logger.error(`Failed to parse classification JSON: ${parseError.message}`);
+        this.logger.debug(`Raw response: ${responseText}`);
+
+        // Return safe default
+        return this.getFallbackClassification();
+      }
+    } catch (error) {
+      this.logger.error(`Failed to classify conversation: ${error.message}`, error.stack);
+      return this.getFallbackClassification();
+    }
+  }
+
+  /**
+   * Fallback classification when LLM fails
+   */
+  private getFallbackClassification(): ConversationClassification {
+    return {
+      intent: 'other',
+      subIntent: 'unknown',
+      leadScore: 30,
+      requiresHuman: false,
+      reasoning: 'Classification failed - using safe default',
+    };
   }
 }
