@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Event, EventStatus, Prisma } from '@prisma/client';
+import { Event, EventStatus, Prisma, Settings } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { LlmService } from '@/modules/llm/llm.service';
 import { MessagingService } from '@/modules/skills/messaging/messaging.service';
 import { ConversationsService } from '@/modules/conversations/conversations.service';
 import { MessagesService } from '@/modules/messages/messages.service';
 import { FollowupService } from '@/modules/skills/followup/followup.service';
+import { BusinessFaqService } from '@/modules/business-faq/business-faq.service';
 
 @Injectable()
 export class AgentService {
@@ -18,6 +19,7 @@ export class AgentService {
     private readonly conversations: ConversationsService,
     private readonly messages: MessagesService,
     private readonly followup: FollowupService,
+    private readonly businessFaq: BusinessFaqService,
   ) {}
 
   /**
@@ -45,13 +47,7 @@ export class AgentService {
 
       // Handle MESSAGE_RECEIVED events
       if (event.type === 'MESSAGE_RECEIVED') {
-        await this.handleMessageReceived(event, {
-          autoReply: settings.autoReply,
-          agentName: settings.agentName,
-          autoFollowup: settings.autoFollowup,
-          followupDelayHours: settings.followupDelayHours,
-          followupMessageTemplate: settings.followupMessageTemplate,
-        });
+        await this.handleMessageReceived(event, settings);
       } else {
         this.logger.log(`Event type ${event.type} not handled yet`);
       }
@@ -68,16 +64,7 @@ export class AgentService {
   /**
    * Handle MESSAGE_RECEIVED events from WhatsApp
    */
-  private async handleMessageReceived(
-    event: Event,
-    settings: {
-      autoReply: boolean;
-      agentName: string;
-      autoFollowup: boolean;
-      followupDelayHours: number;
-      followupMessageTemplate?: string | null;
-    },
-  ): Promise<void> {
+  private async handleMessageReceived(event: Event, settings: Settings): Promise<void> {
     // Parse event payload
     const payload = event.payload as Prisma.JsonObject;
     const from = payload.from as string;
@@ -205,20 +192,41 @@ export class AgentService {
       return;
     }
 
-    // 4. Generate reply using LLM (with conversation context)
-    const replyText = await this.llm.generateReplyForMessage({
-      orgId: event.orgId,
-      messageText,
-      channel: 'whatsapp',
-      businessContext: {
-        businessName: settings.agentName || 'Bizta',
-        conversationHistory: recentMessages,
-        leadScore: classification.leadScore,
-        requiresHuman: classification.requiresHuman,
-      },
-    });
+    // 4. Load FAQs for business context
+    const faqs = await this.businessFaq.getFaqSnippetsForOrg(event.orgId, 10);
+    this.logger.log(`📚 Loaded ${faqs.length} FAQs for business context`);
 
-    this.logger.log(`🧠 LLM generated reply: "${replyText}"`);
+    // 5. Handle off-topic messages with fixed safe reply (intent=other)
+    let replyText: string;
+    if (classification.intent === 'other') {
+      this.logger.log('🚫 Off-topic message detected, using safe reply');
+      replyText = `I'm here to help with questions about ${settings.businessName || settings.agentName || 'our business'}. For other topics, I recommend searching online or consulting appropriate experts.`;
+    } else {
+      // 6. Generate reply using LLM (with conversation context + FAQs)
+      replyText = await this.llm.generateReplyForMessage({
+        orgId: event.orgId,
+        messageText,
+        channel: 'whatsapp',
+        businessContext: {
+          agentName: settings.agentName,
+          agentPersonality: settings.agentPersonality || undefined,
+          businessName: settings.businessName || undefined,
+          businessDescription: settings.businessDescription || undefined,
+          servicesText: settings.servicesText || undefined,
+          hoursText: settings.hoursText || undefined,
+          locationText: settings.locationText || undefined,
+          schedulingNote: settings.schedulingNote || undefined,
+          faqs,
+          conversationHistory: recentMessages,
+          leadScore: classification.leadScore,
+          requiresHuman: classification.requiresHuman,
+          intent: classification.intent,
+          subIntent: classification.subIntent,
+        },
+      });
+    }
+
+    this.logger.log(`🧠 Generated reply: "${replyText}"`);
 
     // 4. Send reply via WhatsApp
     await this.messaging.sendWhatsAppText({
@@ -266,8 +274,37 @@ export class AgentService {
 
     this.logger.log(`✅ AgentAction created for event ${event.id}`);
 
+    // 6b. Log appointment interest if booking-related subIntent
+    const schedulingSubIntents = ['booking', 'demo', 'appointment', 'visit'];
+    if (classification.subIntent && schedulingSubIntents.includes(classification.subIntent)) {
+      this.logger.log(`📅 Booking-related subIntent detected: ${classification.subIntent}`);
+      await this.prisma.agentAction.create({
+        data: {
+          orgId: event.orgId,
+          eventId: event.id,
+          conversationId: conversation.id,
+          type: 'APPOINTMENT_INTEREST_CAPTURED',
+          status: 'COMPLETED',
+          toolName: 'AgentService.detectSchedulingIntent',
+          toolInput: {
+            subIntent: classification.subIntent,
+          } as Prisma.JsonObject,
+          toolOutput: {
+            message: 'Customer expressed interest in scheduling/appointment',
+            requiresFollowup: true,
+          } as Prisma.JsonObject,
+        },
+      });
+      this.logger.log(`📅 APPOINTMENT_INTEREST_CAPTURED action logged`);
+    }
+
     // 7. Schedule followup reminder if enabled (shorter delay for hot leads)
-    if (settings.autoFollowup && settings.followupDelayHours > 0) {
+    // Skip followup if human intervention is required (callback scheduled, escalation, etc.)
+    if (conversation.requiresHuman) {
+      this.logger.log(
+        `⏭️  Skipping automated followup - conversation requires human attention (callback/escalation)`,
+      );
+    } else if (settings.autoFollowup && settings.followupDelayHours > 0) {
       // Use half delay for hot leads (leadScore >= 80)
       const isHotLead = conversation.leadScore !== null && conversation.leadScore >= 80;
       const effectiveDelay = isHotLead

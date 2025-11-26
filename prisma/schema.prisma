@@ -47,6 +47,7 @@ model Organization {
   apiKeys       ApiKey[]
   webhookLogs   WebhookLog[]
   followupTasks FollowupTask[]
+  businessFaqs  BusinessFaq[]
 
   @@map("organizations")
 }
@@ -267,6 +268,7 @@ enum AgentActionType {
   ESCALATE
   CREATE_TASK
   SEND_EMAIL
+  APPOINTMENT_INTEREST_CAPTURED
 }
 
 enum AgentActionStatus {
@@ -332,6 +334,10 @@ model Settings {
   businessDescription String? @db.Text
   businessHours       Json? // { monday: {open: "09:00", close: "17:00"}, ... }
   timezone            String  @default("UTC")
+  servicesText        String? @db.Text // Description of services/products offered
+  hoursText           String? @db.Text // Human-readable hours (overrides businessHours JSON if set)
+  locationText        String? @db.Text // Business location/address information
+  schedulingNote      String? @db.Text // How scheduling/appointments work
 
   // Thresholds
   maxAutoRepliesPerDay Int      @default(100)
@@ -345,6 +351,24 @@ model Settings {
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@map("settings")
+}
+
+model BusinessFaq {
+  id       String @id @default(uuid())
+  question String @db.Text
+  answer   String @db.Text
+  tags     String[] @default([]) // For categorization/search
+  isActive Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId        String       
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([orgId, isActive])
+  @@map("business_faqs")
 }
 
 model SkillConfig {

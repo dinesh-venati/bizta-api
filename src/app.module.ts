@@ -26,6 +26,7 @@ import { AgentEventsProcessor } from './queues/agent-events.processor';
 import { QueuesModule } from './queues/queues.module';
 import { SummaryModule } from './modules/summary/summary.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BusinessFaqModule } from './modules/business-faq/business-faq.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SettingsModule,
     AuditModule,
     WhatsAppModule,
+    BusinessFaqModule,
 
     // Queues
     QueuesModule,

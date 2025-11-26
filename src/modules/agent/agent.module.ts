@@ -6,6 +6,7 @@ import { MessagingModule } from '@/modules/skills/messaging/messaging.module';
 import { ConversationsModule } from '@/modules/conversations/conversations.module';
 import { MessagesModule } from '@/modules/messages/messages.module';
 import { FollowupModule } from '@/modules/skills/followup/followup.module';
+import { BusinessFaqModule } from '@/modules/business-faq/business-faq.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { FollowupModule } from '@/modules/skills/followup/followup.module';
     ConversationsModule,
     MessagesModule,
     FollowupModule,
+    BusinessFaqModule,
   ],
   providers: [AgentService],
   exports: [AgentService],

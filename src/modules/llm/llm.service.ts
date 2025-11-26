@@ -7,7 +7,23 @@ export interface GenerateReplyParams {
   orgId: string;
   messageText: string;
   channel: 'whatsapp' | 'webchat';
-  businessContext?: Record<string, unknown>;
+  businessContext?: {
+    agentName?: string;
+    agentPersonality?: string;
+    businessName?: string;
+    businessDescription?: string;
+    servicesText?: string;
+    hoursText?: string;
+    locationText?: string;
+    schedulingNote?: string;
+    faqs?: Array<{ question: string; answer: string; tags: string[] }>;
+    conversationHistory?: Array<{ from: 'customer' | 'bizta'; text: string }>;
+    requiresHuman?: boolean;
+    leadScore?: number;
+    intent?: string;
+    subIntent?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface GenerateDailySummaryParams {
@@ -122,32 +138,97 @@ export class LlmService {
     const personality = businessContext?.agentPersonality || 'friendly and professional';
     const businessName = businessContext?.businessName;
     const businessDescription = businessContext?.businessDescription;
+    const servicesText = businessContext?.servicesText;
+    const hoursText = businessContext?.hoursText;
+    const locationText = businessContext?.locationText;
+    const schedulingNote = businessContext?.schedulingNote;
+    const faqs = businessContext?.faqs || [];
     const requiresHuman = businessContext?.requiresHuman === true;
     const leadScore =
       typeof businessContext?.leadScore === 'number' ? businessContext.leadScore : 0;
+    const subIntent = businessContext?.subIntent;
 
     let prompt = `You are ${agentName}, an AI business assistant. You are ${personality}.
 
-Your role:
-- Respond to customer inquiries promptly and helpfully
-- Be concise but warm (aim for 2-3 sentences unless more detail is needed)
-- If you don't know specific information about the business, acknowledge it and offer to help connect them with the team
-- Never make up facts about the business`;
+🎯 YOUR CORE MANDATE:
+- You ONLY answer questions about ${businessName || 'this business'}
+- You ONLY use information provided in this prompt
+- You NEVER answer general knowledge, off-topic, or sensitive questions
+- You NEVER make up information
+
+✅ WHAT YOU DO:
+- Answer questions about the business using provided context
+- Be concise but warm (2-3 sentences unless more detail needed)
+- If information is missing, acknowledge it and offer human follow-up
+- Use FAQ knowledge when relevant
+
+❌ WHAT YOU NEVER DO:
+- Answer questions unrelated to this specific business
+- Provide medical, legal, financial, or explicit/adult advice
+- Make up business details (hours, prices, services, policies)
+- Confirm appointments or bookings (only collect details)
+- Discuss your AI nature, capabilities, or limitations extensively
+- Engage in off-topic conversations (politics, news, science, etc.)
+
+🚫 OFF-TOPIC REFUSAL:
+If asked about anything unrelated to ${businessName || 'this business'}, respond:
+"I'm here to help with questions about ${businessName || 'our business'}. For other topics, I recommend searching online or consulting appropriate experts."`;
 
     if (businessName) {
-      prompt += `\n- You represent ${businessName}`;
+      prompt += `\n\n🏢 BUSINESS: ${businessName}`;
     }
 
     if (businessDescription) {
-      prompt += `\n\nBusiness context:\n${businessDescription}`;
+      prompt += `\n\n📝 ABOUT:\n${businessDescription}`;
+    }
+
+    if (servicesText) {
+      prompt += `\n\n🛠️ SERVICES/PRODUCTS:\n${servicesText}`;
+    }
+
+    if (hoursText) {
+      prompt += `\n\n⏰ HOURS:\n${hoursText}`;
+    }
+
+    if (locationText) {
+      prompt += `\n\n📍 LOCATION:\n${locationText}`;
+    }
+
+    if (schedulingNote) {
+      prompt += `\n\n📅 SCHEDULING:\n${schedulingNote}`;
+    }
+
+    // Add FAQ knowledge if available
+    if (faqs.length > 0) {
+      prompt += `\n\n💡 FREQUENTLY ASKED QUESTIONS:`;
+      for (const faq of faqs) {
+        prompt += `\n\nQ: ${faq.question}\nA: ${faq.answer}`;
+      }
+      prompt += `\n\nUse these FAQs to answer similar questions. If a question closely matches an FAQ, use that answer.`;
     }
 
     // Add context for high-priority conversations
     if (requiresHuman) {
-      prompt += `\n\n⚠️ IMPORTANT: This customer needs human attention (callback request, complex issue, or urgent matter). Acknowledge their request and assure them a team member will reach out shortly.`;
+      prompt += `\n\n⚠️ CALLBACK REQUESTED: This customer needs human attention. Acknowledge their request and assure them a team member will reach out shortly. Don't attempt to fully resolve complex issues yourself.`;
     } else if (leadScore >= 80) {
-      prompt += `\n\n🔥 This is a hot lead (score: ${leadScore}/100). Prioritize their inquiry and be extra helpful to convert.`;
+      prompt += `\n\n🔥 HOT LEAD (score: ${leadScore}/100): This customer is highly interested. Be extra helpful and thorough to convert.`;
     }
+
+    // Add scheduling-specific guidance
+    if (subIntent && ['booking', 'demo', 'appointment', 'visit'].includes(subIntent)) {
+      prompt += `\n\n📅 SCHEDULING REQUEST DETECTED:
+- Ask for their preferred date/time and contact details
+- DO NOT confirm the appointment yourself
+- Say: "Let me collect your details and our team will confirm your appointment shortly"
+- Never hallucinate booking confirmations or calendar availability`;
+    }
+
+    // Add sensitive topic guards
+    prompt += `\n\n🚨 SENSITIVE TOPICS - ALWAYS REFUSE:
+- Medical advice → "Please consult a healthcare professional"
+- Legal advice → "Please consult a lawyer or legal expert"
+- Financial advice → "Please consult a financial advisor"
+- Explicit/adult content → "I can't assist with that"`;
 
     return prompt;
   }
