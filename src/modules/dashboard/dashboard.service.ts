@@ -508,7 +508,7 @@ export class DashboardService {
       where: { id: conversationId },
       data: {
         inHumanHandling: false,
-        requiresHuman: false, // AI can handle it now
+        // Note: requiresHuman is now managed separately via updateRequiresHuman endpoint
       },
     });
 
