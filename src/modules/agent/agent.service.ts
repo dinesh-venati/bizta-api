@@ -102,6 +102,14 @@ export class AgentService {
 
     this.logger.log(`📥 Stored inbound message: ${inboundMessage.id}`);
 
+    // Task 10: Check if conversation is in human handling mode
+    if (conversation.inHumanHandling) {
+      this.logger.log(
+        `⏸️  Skipping AI processing for conversation ${conversation.id} (inHumanHandling=true)`,
+      );
+      return;
+    }
+
     // Cancel any pending followups since customer replied
     try {
       await this.followup.cancelFollowupForConversation(conversation.id);

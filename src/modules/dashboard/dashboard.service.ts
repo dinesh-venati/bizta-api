@@ -332,6 +332,7 @@ export class DashboardService {
       subIntent: conversation.subIntent,
       leadScore: conversation.leadScore,
       requiresHuman: conversation.requiresHuman ?? false,
+      inHumanHandling: conversation.inHumanHandling, // Task 10
       channel: 'whatsapp',
       createdAt: conversation.createdAt.toISOString(),
       lastMessageAt:
@@ -404,8 +405,9 @@ export class DashboardService {
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
-        // Optionally clear requiresHuman flag since human has replied
-        requiresHuman: false,
+        // Task 10: Auto-enable human handoff when human replies
+        inHumanHandling: true,
+        requiresHuman: true,
       },
     });
 
@@ -420,7 +422,9 @@ export class DashboardService {
       },
     });
 
-    this.logger.log(`Human reply sent successfully, message ID: ${message.id}`);
+    this.logger.log(
+      `Human reply sent successfully, message ID: ${message.id}, inHumanHandling=true`,
+    );
 
     return {
       id: message.id,
@@ -428,6 +432,93 @@ export class DashboardService {
       content: message.content,
       createdAt: message.createdAt.toISOString(),
       handledBy: 'HUMAN',
+    };
+  }
+
+  /**
+   * Task 10: Take over a conversation as human (pause AI)
+   */
+  async takeoverConversation(orgId: string, conversationId: string) {
+    this.logger.log(`[TAKEOVER] Human taking over conversation: ${conversationId}`);
+
+    // Verify conversation belongs to org
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        orgId,
+      },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Set inHumanHandling flag
+    const updated = await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        inHumanHandling: true,
+        requiresHuman: true, // Mark as requiring human attention
+      },
+    });
+
+    // Cancel pending followups
+    await this.prisma.followupTask.updateMany({
+      where: {
+        conversationId,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    });
+
+    this.logger.log(
+      `[TAKEOVER] AI paused for conversation ${conversationId}, inHumanHandling=true`,
+    );
+
+    return {
+      id: updated.id,
+      inHumanHandling: updated.inHumanHandling,
+      requiresHuman: updated.requiresHuman,
+    };
+  }
+
+  /**
+   * Task 10: Release conversation back to AI
+   */
+  async releaseConversation(orgId: string, conversationId: string) {
+    this.logger.log(`[RELEASE] Releasing conversation to AI: ${conversationId}`);
+
+    // Verify conversation belongs to org
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        orgId,
+      },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Clear inHumanHandling flag
+    const updated = await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        inHumanHandling: false,
+        requiresHuman: false, // AI can handle it now
+      },
+    });
+
+    this.logger.log(
+      `[RELEASE] AI resumed for conversation ${conversationId}, inHumanHandling=false`,
+    );
+
+    return {
+      id: updated.id,
+      inHumanHandling: updated.inHumanHandling,
+      requiresHuman: updated.requiresHuman,
     };
   }
 }

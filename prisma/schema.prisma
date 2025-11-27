@@ -150,6 +150,9 @@ model Conversation {
   leadScore     Int? // 0-100
   requiresHuman Boolean? @default(false)
   
+  // Human Handoff (Task 10)
+  inHumanHandling Boolean @default(false)
+  
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 

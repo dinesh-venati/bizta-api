@@ -22,6 +22,7 @@ export class ConversationDetailDto {
   subIntent?: string | null;
   leadScore?: number | null;
   requiresHuman: boolean;
+  inHumanHandling: boolean; // Task 10
   channel: 'whatsapp';
   createdAt: string;
   lastMessageAt: string;

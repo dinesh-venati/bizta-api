@@ -17,6 +17,7 @@ import {
   ConversationDetailDto,
   SendReplyDto,
   ReplyResponseDto,
+  HandoffResponseDto,
 } from './dto';
 
 @Controller('dashboard')
@@ -81,5 +82,29 @@ export class DashboardController {
     @Body() dto: SendReplyDto,
   ): Promise<ReplyResponseDto> {
     return this.dashboardService.sendReply(orgId, conversationId, dto.message);
+  }
+
+  /**
+   * POST /api/v1/dashboard/conversations/:id/takeover
+   * Task 10: Take over conversation as human (pause AI)
+   */
+  @Post('conversations/:id/takeover')
+  async takeoverConversation(
+    @CurrentOrg() orgId: string,
+    @Param('id') conversationId: string,
+  ): Promise<HandoffResponseDto> {
+    return this.dashboardService.takeoverConversation(orgId, conversationId);
+  }
+
+  /**
+   * POST /api/v1/dashboard/conversations/:id/release
+   * Task 10: Release conversation back to AI
+   */
+  @Post('conversations/:id/release')
+  async releaseConversation(
+    @CurrentOrg() orgId: string,
+    @Param('id') conversationId: string,
+  ): Promise<HandoffResponseDto> {
+    return this.dashboardService.releaseConversation(orgId, conversationId);
   }
 }
