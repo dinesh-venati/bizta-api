@@ -1112,9 +1112,72 @@
             "description": "**Task 10: Release to AI**\n\nRelease a conversation back to AI control, resuming automatic operations.\n\n## Authentication\n- Requires JWT access token\n- Conversation must belong to user's organization\n- OWNER or ADMIN role required\n\n## What It Does\n1. Sets `inHumanHandling=false`\n2. Sets `requiresHuman=false`\n3. AI will resume auto-replies\n4. AI can schedule followups again\n\n## Response\n```json\n{\n  \"id\": \"conv-uuid\",\n  \"inHumanHandling\": false,\n  \"requiresHuman\": false\n}\n```\n\n## Use Cases\n- Handing conversation back to AI after resolution\n- Re-enabling automation after manual intervention\n- Testing AI behavior after human fixes\n- Bulk release of resolved conversations"
           },
           "response": []
+        },
+        {
+          "name": "Cancel Followup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations/:id/followup/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations", ":id", "followup", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Conversation ID (UUID)"
+                }
+              ]
+            },
+            "description": "**Task 10: Cancel Followup**\n\nCancel all pending followup tasks for a conversation.\n\n## Authentication\n- Requires JWT access token\n- Conversation must belong to user's organization\n- OWNER or ADMIN role required\n\n## What It Does\n1. Finds all pending followup tasks for the conversation\n2. Updates their status to CANCELLED\n3. Returns count of cancelled followups\n\n## Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Cancelled 1 pending followup(s)\"\n}\n```\n\n## Use Cases\n- Human decides no followup needed\n- Customer issue already resolved\n- Clearing pending tasks before scheduling new one\n- Manual followup management during human handling"
+          },
+          "response": []
+        },
+        {
+          "name": "Schedule Followup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delayHours\": 24\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations/:id/followup/schedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations", ":id", "followup", "schedule"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Conversation ID (UUID)"
+                }
+              ]
+            },
+            "description": "**Task 10: Schedule Followup**\n\nSchedule a new followup task for a conversation with custom delay.\n\n## Authentication\n- Requires JWT access token\n- Conversation must belong to user's organization\n- OWNER or ADMIN role required\n\n## Request Body\n```json\n{\n  \"delayHours\": 24\n}\n```\n\n**Common Values:**\n- `24` - Follow up in 24 hours\n- `48` - Follow up in 48 hours (2 days)\n- `72` - Follow up in 72 hours (3 days)\n\n## What It Does\n1. Cancels any existing pending followups (auto-cleanup)\n2. Creates new followup task with specified delay\n3. Sets type to CUSTOMER_REMINDER\n4. Maps channel type appropriately (WHATSAPP/WEBCHAT/EMAIL)\n5. Returns scheduled time\n\n## Response\n```json\n{\n  \"success\": true,\n  \"message\": \"Followup scheduled for 24 hours from now\",\n  \"scheduledAt\": \"2025-11-28T10:30:00.000Z\"\n}\n```\n\n## Use Cases\n- Human scheduling manual followup during handoff\n- Custom timing based on customer needs\n- Rescheduling after conversation update\n- Preset options (24h/48h/72h) in frontend UI"
+          },
+          "response": []
         }
       ],
-      "description": "**Task 9: Owner Dashboard MVP** + **Task 10: AI Pause/Resume**\n\n## Overview\nComplete dashboard system for Bizta owners to monitor AI assistant performance and manually intervene when needed.\n\n## Task 10: Human Handoff Control\nNew feature to pause/resume AI for conversations:\n- **Auto-Takeover**: AI pauses when human sends manual reply\n- **Explicit Takeover**: Pause AI before replying\n- **Release to AI**: Resume automation after human handling\n- **Status Tracking**: `inHumanHandling` flag in DB and UI\n\n## Features\n1. **Flexible Date Ranges**: View metrics for today, yesterday, or day before yesterday\n2. **Real-time Metrics**: Conversations, messages, followups, top intents\n3. **Conversation Management**: Paginated list with filters\n4. **Human Intervention**: Manual reply capability\n5. **Full Message History**: Complete conversation threads\n6. **Organization Scoped**: Automatic filtering by user's org\n\n## Dashboard Metrics\n- Total conversations (with activity on date)\n- New conversations (created on date)\n- Customer messages count\n- Bizta messages count\n- Conversations needing human attention (current state)\n- Pending followups (created on date)\n- Top 5 customer intents\n\n## Conversation Filters\n- **requiresHuman**: true/false - Needs manual attention\n- **intent**: LEAD, SUPPORT, INQUIRY, COMPLAINT, SPAM, UNKNOWN\n- **channel**: whatsapp (future: sms, email, etc.)\n- **Pagination**: page, pageSize (max 100)\n\n## Frontend (Next.js)\nComplete responsive UI with:\n- Login page with JWT authentication\n- Dashboard overview with date selector tabs\n- Conversations list with filters\n- Conversation detail with message thread\n- Manual reply form\n- Modern purple-blue gradient theme\n\n## Security\n- JWT authentication required\n- OWNER or ADMIN role required\n- Automatic organization scoping via @CurrentOrg decorator\n- No cross-organization data access\n\n## Tech Stack\n- **Backend**: NestJS, Prisma, PostgreSQL\n- **Frontend**: Next.js 14, TanStack Query, Tailwind CSS\n- **Auth**: JWT with refresh tokens\n- **API**: RESTful with Swagger docs\n\n## Testing\n1. Login via /auth/login endpoint\n2. Token automatically saved to collection variable\n3. All dashboard endpoints use saved token\n4. Update conversation ID in path variables as needed"
+      "description": "**Task 9: Owner Dashboard MVP** + **Task 10: AI Pause/Resume**\n\n## Overview\nComplete dashboard system for Bizta owners to monitor AI assistant performance and manually intervene when needed.\n\n## Task 10: Human Handoff Control\nNew feature to pause/resume AI for conversations with followup management:\n- **Auto-Takeover**: AI pauses when human sends manual reply\n- **Explicit Takeover**: Pause AI before replying\n- **Release to AI**: Resume automation after human handling\n- **Cancel Followup**: Cancel pending followup tasks\n- **Schedule Followup**: Create new followup with custom delay (24h/48h/72h)\n- **Status Tracking**: `inHumanHandling` flag in DB and UI\n\n## Features\n1. **Flexible Date Ranges**: View metrics for today, yesterday, or day before yesterday\n2. **Real-time Metrics**: Conversations, messages, followups, top intents\n3. **Conversation Management**: Paginated list with filters\n4. **Human Intervention**: Manual reply capability\n5. **Followup Management**: Cancel and schedule followups during human handoff\n6. **Full Message History**: Complete conversation threads\n7. **Organization Scoped**: Automatic filtering by user's org\n\n## Dashboard Metrics\n- Total conversations (with activity on date)\n- New conversations (created on date)\n- Customer messages count\n- Bizta messages count\n- Conversations needing human attention (current state)\n- Pending followups (created on date)\n- Top 5 customer intents\n\n## Conversation Filters\n- **requiresHuman**: true/false - Needs manual attention\n- **intent**: LEAD, SUPPORT, INQUIRY, COMPLAINT, SPAM, UNKNOWN\n- **channel**: whatsapp (future: sms, email, etc.)\n- **Pagination**: page, pageSize (max 100)\n\n## Frontend (Next.js)\nComplete responsive UI with:\n- Login page with JWT authentication\n- Dashboard overview with date selector tabs\n- Conversations list with filters\n- Conversation detail with message thread\n- Manual reply form\n- Modern purple-blue gradient theme\n\n## Security\n- JWT authentication required\n- OWNER or ADMIN role required\n- Automatic organization scoping via @CurrentOrg decorator\n- No cross-organization data access\n\n## Tech Stack\n- **Backend**: NestJS, Prisma, PostgreSQL\n- **Frontend**: Next.js 14, TanStack Query, Tailwind CSS\n- **Auth**: JWT with refresh tokens\n- **API**: RESTful with Swagger docs\n\n## Testing\n1. Login via /auth/login endpoint\n2. Token automatically saved to collection variable\n3. All dashboard endpoints use saved token\n4. Update conversation ID in path variables as needed"
     }
   ],
   "variable": [

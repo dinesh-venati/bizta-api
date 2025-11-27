@@ -522,4 +522,128 @@ export class DashboardService {
       requiresHuman: updated.requiresHuman,
     };
   }
+
+  /**
+   * Cancel pending followup for a conversation
+   */
+  async cancelFollowup(
+    orgId: string,
+    conversationId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(`[FOLLOWUP] Cancelling followup for conversation: ${conversationId}`);
+
+    // Verify conversation belongs to org
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        orgId,
+      },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Cancel all pending followups
+    const result = await this.prisma.followupTask.updateMany({
+      where: {
+        conversationId,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    });
+
+    this.logger.log(`[FOLLOWUP] Cancelled ${result.count} pending followup(s)`);
+
+    return {
+      success: true,
+      message:
+        result.count > 0
+          ? `Cancelled ${result.count} pending followup(s)`
+          : 'No pending followups to cancel',
+    };
+  }
+
+  /**
+   * Schedule a new followup for a conversation
+   */
+  async scheduleFollowup(
+    orgId: string,
+    conversationId: string,
+    delayHours: number = 24,
+  ): Promise<{ success: boolean; message: string; scheduledAt: string }> {
+    this.logger.log(
+      `[FOLLOWUP] Scheduling followup for conversation: ${conversationId} (delay: ${delayHours}h)`,
+    );
+
+    // Verify conversation belongs to org
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        orgId,
+      },
+      select: {
+        id: true,
+        channelId: true,
+        channel: {
+          select: {
+            type: true,
+          },
+        },
+        customerPhone: true,
+      },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Cancel any existing pending followups first
+    await this.prisma.followupTask.updateMany({
+      where: {
+        conversationId,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    });
+
+    // Schedule new followup
+    const scheduledAt = new Date();
+    scheduledAt.setHours(scheduledAt.getHours() + delayHours);
+
+    // Map ChannelType to FollowupChannel (default to WHATSAPP for unsupported channels)
+    let followupChannel: 'WHATSAPP' | 'WEBCHAT' | 'EMAIL' = 'WHATSAPP';
+    if (conversation.channel.type === 'WEBCHAT') {
+      followupChannel = 'WEBCHAT';
+    } else if (conversation.channel.type === 'EMAIL') {
+      followupChannel = 'EMAIL';
+    }
+
+    const followup = await this.prisma.followupTask.create({
+      data: {
+        conversationId,
+        orgId,
+        customerPhone: conversation.customerPhone || '',
+        channel: followupChannel,
+        type: 'CUSTOMER_REMINDER',
+        scheduledAt,
+        status: 'PENDING',
+        messageTemplate: `Follow-up reminder scheduled by human agent for ${delayHours} hours from now.`,
+      },
+    });
+
+    this.logger.log(
+      `[FOLLOWUP] Scheduled new followup: ${followup.id} at ${scheduledAt.toISOString()}`,
+    );
+
+    return {
+      success: true,
+      message: `Followup scheduled for ${delayHours} hours from now`,
+      scheduledAt: scheduledAt.toISOString(),
+    };
+  }
 }

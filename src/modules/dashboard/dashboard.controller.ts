@@ -107,4 +107,29 @@ export class DashboardController {
   ): Promise<HandoffResponseDto> {
     return this.dashboardService.releaseConversation(orgId, conversationId);
   }
+
+  /**
+   * POST /api/v1/dashboard/conversations/:id/followup/cancel
+   * Cancel pending followup for conversation
+   */
+  @Post('conversations/:id/followup/cancel')
+  async cancelFollowup(
+    @CurrentOrg() orgId: string,
+    @Param('id') conversationId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.dashboardService.cancelFollowup(orgId, conversationId);
+  }
+
+  /**
+   * POST /api/v1/dashboard/conversations/:id/followup/schedule
+   * Schedule a new followup for conversation
+   */
+  @Post('conversations/:id/followup/schedule')
+  async scheduleFollowup(
+    @CurrentOrg() orgId: string,
+    @Param('id') conversationId: string,
+    @Body() dto: { delayHours?: number },
+  ): Promise<{ success: boolean; message: string; scheduledAt: string }> {
+    return this.dashboardService.scheduleFollowup(orgId, conversationId, dto.delayHours);
+  }
 }
