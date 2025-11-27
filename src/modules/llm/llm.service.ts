@@ -217,10 +217,12 @@ If asked about anything unrelated to ${businessName || 'this business'}, respond
     // Add scheduling-specific guidance
     if (subIntent && ['booking', 'demo', 'appointment', 'visit'].includes(subIntent)) {
       prompt += `\n\n📅 SCHEDULING REQUEST DETECTED:
-- Ask for their preferred date/time and contact details
+- Ask for their preferred date/time
 - DO NOT confirm the appointment yourself
-- Say: "Let me collect your details and our team will confirm your appointment shortly"
-- Never hallucinate booking confirmations or calendar availability`;
+- Say: "Let me collect your preferred timing and our team will confirm your appointment shortly"
+- Never hallucinate booking confirmations or calendar availability
+- NOTE: We already have their contact number, no need to ask for it again
+- Once they provide their preferred date/time, thank them and let them know the team will reach out to confirm`;
     }
 
     // Add sensitive topic guards
@@ -393,6 +395,8 @@ Classification Rules:
   • Complex negotiation needed
   • Explicitly asks for human agent
   • Escalation keywords present
+  • Customer provided appointment/booking details that need confirmation
+  • Customer is ready to proceed with purchase/service
 
 - reasoning: Brief explanation (1-2 sentences) for your classification
 
