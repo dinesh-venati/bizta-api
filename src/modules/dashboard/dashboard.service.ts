@@ -102,13 +102,14 @@ export class DashboardService {
       },
     });
 
-    // Followups created on the selected date
-    const pendingFollowupsToday = await this.prisma.followupTask.count({
+    // Count conversations with pending followups (current state, not date-specific)
+    const pendingFollowupsToday = await this.prisma.conversation.count({
       where: {
         orgId,
-        createdAt: {
-          gte: targetDate,
-          lt: nextDay,
+        followupTasks: {
+          some: {
+            status: 'PENDING',
+          },
         },
       },
     });
