@@ -646,4 +646,44 @@ export class DashboardService {
       scheduledAt: scheduledAt.toISOString(),
     };
   }
+
+  /**
+   * Update requiresHuman flag for a conversation
+   */
+  async updateRequiresHuman(
+    orgId: string,
+    conversationId: string,
+    requiresHuman: boolean,
+  ): Promise<{ success: boolean; requiresHuman: boolean }> {
+    this.logger.log(
+      `[REQUIRES_HUMAN] Updating conversation ${conversationId} to requiresHuman=${requiresHuman}`,
+    );
+
+    // Verify conversation belongs to org
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        orgId,
+      },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Update requiresHuman flag
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { requiresHuman },
+    });
+
+    this.logger.log(
+      `[REQUIRES_HUMAN] Updated conversation ${conversationId}: requiresHuman=${requiresHuman}`,
+    );
+
+    return {
+      success: true,
+      requiresHuman,
+    };
+  }
 }

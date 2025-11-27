@@ -132,4 +132,17 @@ export class DashboardController {
   ): Promise<{ success: boolean; message: string; scheduledAt: string }> {
     return this.dashboardService.scheduleFollowup(orgId, conversationId, dto.delayHours);
   }
+
+  /**
+   * POST /api/v1/dashboard/conversations/:id/requires-human
+   * Update requiresHuman flag for conversation
+   */
+  @Post('conversations/:id/requires-human')
+  async updateRequiresHuman(
+    @CurrentOrg() orgId: string,
+    @Param('id') conversationId: string,
+    @Body() dto: { requiresHuman: boolean },
+  ): Promise<{ success: boolean; requiresHuman: boolean }> {
+    return this.dashboardService.updateRequiresHuman(orgId, conversationId, dto.requiresHuman);
+  }
 }
