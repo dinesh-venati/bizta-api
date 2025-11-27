@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Bizta Digital COO API",
-    "description": "Complete API collection for Bizta - AI Digital COO Backend\n\n## Setup\n1. Import this collection into Postman\n2. Set the `baseUrl` variable to `http://localhost:3000/api/v1`\n3. After login/register, the access token is automatically saved to `accessToken` variable\n4. Protected endpoints use the `accessToken` automatically\n\n## Authentication Flow\n1. **Register** → Creates user + organization → Returns tokens\n2. **Login** → Returns access + refresh tokens\n3. **Get Current User** → Use access token to get user info\n4. **Refresh Token** → Get new access token using refresh token\n\n## Task 4: AI-Powered WhatsApp Replies\nThe WhatsApp webhook now triggers full AI automation:\n1. Message received → Conversation created/found\n2. Inbound message stored in DB\n3. OpenAI LLM generates reply\n4. Reply sent via WhatsApp Cloud API\n5. Outbound message stored in DB\n6. AgentAction logged (type: REPLY)\n\n## Task 5: Smart Follow-Up System\nAutomatic follow-ups for inactive conversations:\n1. Follow-up task scheduled (configurable delay)\n2. Cancelled automatically if customer replies\n3. Sent via BullMQ delayed jobs\n4. Full audit trail (Event + AgentAction + Message)\n\n## Task 6: Daily Summary Reports\nCOO-style daily summaries with AI:\n1. Daily stats aggregation (7 metrics)\n2. LLM-generated professional summary\n3. Email delivery to organization owner\n4. Automated via cron (21:30 UTC) or manual trigger\n\n## Task 7: Lead Qualification & Intent Classification\nIntelligent conversation classification with GPT-4o-mini:\n1. Auto-classification after every inbound message\n2. Intent detection (LEAD, SUPPORT, SPAM, GREETING, OTHER)\n3. Lead scoring (0-100) with quality tiers\n4. Spam filtering (no reply for score < 25)\n5. Hot lead priority (50% followup delay for score ≥ 80)\n6. Human escalation detection (requiresHuman flag)\n\n## Task 8: Business-Scoped Guardrails + FAQ System\nComprehensive business-scoped AI with knowledge base:\n1. Business context fields (services, hours, location, scheduling)\n2. FAQ knowledge base (BusinessFaq model)\n3. Off-topic guard (refuses non-business questions)\n4. Enhanced LLM guardrails (no hallucination, sensitive topic refusal)\n5. Scheduling-aware (collects details, doesn't confirm appointments)\n6. APPOINTMENT_INTEREST_CAPTURED action logging\n\n## Variables\n- `baseUrl`: http://localhost:3000/api/v1\n- `accessToken`: (auto-set after login/register)\n- `refreshToken`: (auto-set after login/register)\n- `orgId`: (set manually for testing)\n- `webhookVerifyToken`: your-webhook-verify-token\n- `webhookSecret`: your-webhook-secret",
+    "description": "Complete API collection for Bizta - AI Digital COO Backend\n\n## Setup\n1. Import this collection into Postman\n2. Set the `baseUrl` variable to `http://localhost:3000/api/v1`\n3. After login/register, the access token is automatically saved to `accessToken` variable\n4. Protected endpoints use the `accessToken` automatically\n\n## Authentication Flow\n1. **Register** → Creates user + organization → Returns tokens\n2. **Login** → Returns access + refresh tokens\n3. **Get Current User** → Use access token to get user info\n4. **Refresh Token** → Get new access token using refresh token\n\n## Task 4: AI-Powered WhatsApp Replies\nThe WhatsApp webhook now triggers full AI automation:\n1. Message received → Conversation created/found\n2. Inbound message stored in DB\n3. OpenAI LLM generates reply\n4. Reply sent via WhatsApp Cloud API\n5. Outbound message stored in DB\n6. AgentAction logged (type: REPLY)\n\n## Task 5: Smart Follow-Up System\nAutomatic follow-ups for inactive conversations:\n1. Follow-up task scheduled (configurable delay)\n2. Cancelled automatically if customer replies\n3. Sent via BullMQ delayed jobs\n4. Full audit trail (Event + AgentAction + Message)\n\n## Task 6: Daily Summary Reports\nCOO-style daily summaries with AI:\n1. Daily stats aggregation (7 metrics)\n2. LLM-generated professional summary\n3. Email delivery to organization owner\n4. Automated via cron (21:30 UTC) or manual trigger\n\n## Task 7: Lead Qualification & Intent Classification\nIntelligent conversation classification with GPT-4o-mini:\n1. Auto-classification after every inbound message\n2. Intent detection (LEAD, SUPPORT, SPAM, GREETING, OTHER)\n3. Lead scoring (0-100) with quality tiers\n4. Spam filtering (no reply for score < 25)\n5. Hot lead priority (50% followup delay for score ≥ 80)\n6. Human escalation detection (requiresHuman flag)\n\n## Task 8: Business-Scoped Guardrails + FAQ System\nComprehensive business-scoped AI with knowledge base:\n1. Business context fields (services, hours, location, scheduling)\n2. FAQ knowledge base (BusinessFaq model)\n3. Off-topic guard (refuses non-business questions)\n4. Enhanced LLM guardrails (no hallucination, sensitive topic refusal)\n5. Scheduling-aware (collects details, doesn't confirm appointments)\n6. APPOINTMENT_INTEREST_CAPTURED action logging\n\n## Task 9: Owner Dashboard MVP\nFull-stack dashboard for monitoring and manual intervention:\n1. Dashboard summary with flexible date ranges (today, yesterday, day before yesterday)\n2. Paginated conversations list with filters (requiresHuman, intent, channel)\n3. Detailed conversation view with full message history\n4. Manual reply capability for human intervention\n5. Real-time metrics and top intents analytics\n6. Modern purple-blue gradient UI theme\n\n## Variables\n- `baseUrl`: http://localhost:3000/api/v1\n- `accessToken`: (auto-set after login/register)\n- `refreshToken`: (auto-set after login/register)\n- `orgId`: (set manually for testing)\n- `webhookVerifyToken`: your-webhook-verify-token\n- `webhookSecret`: your-webhook-secret",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "bizta-digital-coo"
   },
@@ -779,6 +779,288 @@
         }
       ],
       "description": "**Task 6: Daily Summary System - Testing Endpoints**\n\n## Overview\nThese endpoints allow manual triggering of daily summary reports for testing purposes.\n\n## Features\n- **7 Daily Metrics**: Conversations, messages, follow-ups, needs attention\n- **AI-Generated Summaries**: COO-style professional reports using GPT-4o-mini\n- **Email Delivery**: Console-logged in dev, ready for SMTP in production\n- **Automated Cron**: Runs daily at 21:30 UTC (configurable)\n- **Full Audit Trail**: Event + AgentAction records\n\n## Metrics Tracked\n1. **Total Conversations Today** - Active or created today\n2. **New Conversations Today** - Created today only\n3. **Messages from Customers** - INBOUND direction\n4. **Messages from Bizta** - OUTBOUND direction\n5. **Follow-ups Scheduled** - Created today\n6. **Follow-ups Sent** - Sent today (status: SENT)\n7. **Conversations Needing Human** - OPEN + last INBOUND message > 2 hours\n\n## Summary Content\nAI generates a 2-4 paragraph report including:\n- Key metrics summary\n- Issues requiring attention\n- Actionable suggestions\n- Professional, encouraging tone\n\n## Email Format (Dev)\n```\n========================================\n📨 EMAIL (Development Mode)\n========================================\nTo: owner@example.com\nSubject: Daily Summary for Your Organization - November 26, 2025\n----------------------------------------\n**Daily Summary Report - Tuesday, November 26, 2025**\n\nToday, we had a total of 3 active conversations, with 2 new \nconversations initiated. Customer engagement remains steady...\n\n[AI-generated insights and suggestions]\n========================================\n```\n\n## Production Setup\n1. Add SMTP credentials to .env:\n   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS\n   - EMAIL_FROM\n2. Uncomment real email code in NotificationsService\n3. Summaries sent automatically at 21:30 UTC\n\n## Configuration\n**Settings Model Fields:**\n- `dailySummaryEnabled` (Boolean) - Enable/disable summaries\n- `dailySummaryEmail` (String) - Override recipient email\n- `dailySummaryTime` (String) - Future: custom send time\n\n**Environment Variables:**\n- `DAILY_SUMMARY_CRON` - Custom cron schedule (default: '30 21 * * *')\n- `OPENAI_API_KEY` - Required for AI summary generation\n- `LLM_MODEL` - Default: gpt-4o-mini\n\n## Testing Workflow\n1. Create some activity (messages, conversations)\n2. Trigger manual summary for your org\n3. Check server logs for email output\n4. Verify Event and AgentAction in database\n5. Adjust settings if needed\n\n## Security\n- Endpoints are public (@Public decorator)\n- No JWT required for testing\n- Production: Consider adding auth or removing endpoints"
+    },
+    {
+      "name": "Dashboard (Task 9)",
+      "item": [
+        {
+          "name": "Get Summary - Today",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary/today?date=today",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary", "today"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "today",
+                  "description": "Date range: today, yesterday, or dayBeforeYesterday"
+                }
+              ]
+            },
+            "description": "**Task 9: Dashboard Summary**\n\nGet comprehensive dashboard metrics for the selected date range.\n\n## Authentication\n- Requires JWT access token\n- Automatically scoped to user's organization\n- OWNER or ADMIN role required\n\n## Query Parameters\n- `date` (optional): 'today', 'yesterday', or 'dayBeforeYesterday'\n- Default: 'today'\n\n## Response Metrics\n1. **totalConversationsToday** - Conversations with activity on selected date\n2. **newConversationsToday** - New conversations created on selected date\n3. **totalMessagesFromCustomersToday** - INBOUND messages count\n4. **totalMessagesFromBiztaToday** - OUTBOUND messages count\n5. **conversationsNeedingHuman** - Current count requiring attention (not date-filtered)\n6. **pendingFollowupsToday** - Followup tasks created on selected date\n7. **topIntents** - Top 5 intents with conversation counts\n\n## Example Response\n```json\n{\n  \"date\": \"2025-11-26T18:30:00.000Z\",\n  \"totalConversationsToday\": 5,\n  \"newConversationsToday\": 2,\n  \"totalMessagesFromCustomersToday\": 15,\n  \"totalMessagesFromBiztaToday\": 12,\n  \"conversationsNeedingHuman\": 3,\n  \"pendingFollowupsToday\": 4,\n  \"topIntents\": [\n    { \"intent\": \"LEAD\", \"count\": 8 },\n    { \"intent\": \"SUPPORT\", \"count\": 5 }\n  ]\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Summary - Yesterday",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary/today?date=yesterday",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary", "today"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "yesterday"
+                }
+              ]
+            },
+            "description": "Get dashboard metrics for yesterday."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Summary - Day Before Yesterday",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary/today?date=dayBeforeYesterday",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary", "today"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "dayBeforeYesterday"
+                }
+              ]
+            },
+            "description": "Get dashboard metrics for day before yesterday."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversations - All",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20",
+                  "description": "Items per page (default: 20, max: 100)"
+                }
+              ]
+            },
+            "description": "**Task 9: Conversations List**\n\nGet paginated list of conversations with optional filters.\n\n## Authentication\n- Requires JWT access token\n- Automatically scoped to user's organization\n\n## Query Parameters\n- `page` (optional): Page number, default 1\n- `pageSize` (optional): Items per page, default 20, max 100\n- `requiresHuman` (optional): Filter by human attention flag (true/false)\n- `intent` (optional): Filter by intent (LEAD, SUPPORT, INQUIRY, COMPLAINT, SPAM, UNKNOWN)\n- `channel` (optional): Filter by channel (currently only 'whatsapp')\n\n## Response\n```json\n{\n  \"items\": [\n    {\n      \"id\": \"uuid\",\n      \"customerPhone\": \"+1234567890\",\n      \"customerName\": \"John Doe\",\n      \"lastMessageAt\": \"2025-11-26T10:30:00.000Z\",\n      \"intent\": \"LEAD\",\n      \"subIntent\": \"product_inquiry\",\n      \"leadScore\": 85,\n      \"requiresHuman\": true,\n      \"channel\": \"whatsapp\",\n      \"hasPendingFollowup\": true\n    }\n  ],\n  \"total\": 45,\n  \"page\": 1,\n  \"pageSize\": 20,\n  \"totalPages\": 3\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversations - Requires Human",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations?requiresHuman=true&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations"],
+              "query": [
+                {
+                  "key": "requiresHuman",
+                  "value": "true",
+                  "description": "Filter conversations requiring human attention"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get only conversations that require human attention."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversations - By Intent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations?intent=LEAD&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations"],
+              "query": [
+                {
+                  "key": "intent",
+                  "value": "LEAD",
+                  "description": "Filter by intent: LEAD, SUPPORT, INQUIRY, COMPLAINT, SPAM, UNKNOWN"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get conversations filtered by specific intent."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Conversation Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Conversation ID (UUID)"
+                }
+              ]
+            },
+            "description": "**Task 9: Conversation Detail**\n\nGet detailed conversation information with full message history.\n\n## Authentication\n- Requires JWT access token\n- Conversation must belong to user's organization\n\n## Response\n```json\n{\n  \"id\": \"uuid\",\n  \"customerPhone\": \"+1234567890\",\n  \"customerName\": \"John Doe\",\n  \"intent\": \"LEAD\",\n  \"subIntent\": \"product_inquiry\",\n  \"leadScore\": 85,\n  \"requiresHuman\": true,\n  \"channel\": \"whatsapp\",\n  \"createdAt\": \"2025-11-25T14:20:00.000Z\",\n  \"lastMessageAt\": \"2025-11-26T10:30:00.000Z\",\n  \"followup\": {\n    \"hasPending\": true,\n    \"nextScheduledAt\": \"2025-11-27T10:00:00.000Z\",\n    \"lastSentAt\": null\n  },\n  \"messages\": [\n    {\n      \"id\": \"msg-uuid\",\n      \"direction\": \"INBOUND\",\n      \"content\": \"Hi, I'm interested in your product\",\n      \"createdAt\": \"2025-11-26T10:25:00.000Z\",\n      \"handledBy\": null\n    },\n    {\n      \"id\": \"msg-uuid-2\",\n      \"direction\": \"OUTBOUND\",\n      \"content\": \"Thank you for your interest!\",\n      \"createdAt\": \"2025-11-26T10:26:00.000Z\",\n      \"handledBy\": \"AI\"\n    }\n  ]\n}\n```\n\n## Message Properties\n- `direction`: 'INBOUND' (customer) or 'OUTBOUND' (Bizta)\n- `handledBy`: 'AI', 'HUMAN', 'SYSTEM', or null\n- Messages sorted by createdAt (oldest first)"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Manual Reply",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Thank you for contacting us. A team member will assist you shortly.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/conversations/:id/reply",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "conversations", ":id", "reply"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "Conversation ID (UUID)"
+                }
+              ]
+            },
+            "description": "**Task 9: Manual Reply**\n\nSend a manual reply to a customer conversation.\n\n## Authentication\n- Requires JWT access token\n- Conversation must belong to user's organization\n\n## Request Body\n```json\n{\n  \"message\": \"Your reply message here\"\n}\n```\n\n## What It Does\n1. Validates conversation exists and belongs to org\n2. Sends message via WhatsApp Cloud API\n3. Creates Message record (direction: OUTBOUND, handledBy: HUMAN)\n4. Creates Event record (MANUAL_REPLY_SENT)\n5. Creates AgentAction record (MANUAL_REPLY)\n6. Returns success response\n\n## Response\n```json\n{\n  \"success\": true,\n  \"messageId\": \"msg-uuid\",\n  \"sentAt\": \"2025-11-26T10:30:00.000Z\"\n}\n```\n\n## Use Cases\n- Responding to conversations requiring human attention\n- Providing personalized customer service\n- Handling complex inquiries beyond AI capability\n- Emergency interventions"
+          },
+          "response": []
+        }
+      ],
+      "description": "**Task 9: Owner Dashboard MVP**\n\n## Overview\nComplete dashboard system for Bizta owners to monitor AI assistant performance and manually intervene when needed.\n\n## Features\n1. **Flexible Date Ranges**: View metrics for today, yesterday, or day before yesterday\n2. **Real-time Metrics**: Conversations, messages, followups, top intents\n3. **Conversation Management**: Paginated list with filters\n4. **Human Intervention**: Manual reply capability\n5. **Full Message History**: Complete conversation threads\n6. **Organization Scoped**: Automatic filtering by user's org\n\n## Dashboard Metrics\n- Total conversations (with activity on date)\n- New conversations (created on date)\n- Customer messages count\n- Bizta messages count\n- Conversations needing human attention (current state)\n- Pending followups (created on date)\n- Top 5 customer intents\n\n## Conversation Filters\n- **requiresHuman**: true/false - Needs manual attention\n- **intent**: LEAD, SUPPORT, INQUIRY, COMPLAINT, SPAM, UNKNOWN\n- **channel**: whatsapp (future: sms, email, etc.)\n- **Pagination**: page, pageSize (max 100)\n\n## Frontend (Next.js)\nComplete responsive UI with:\n- Login page with JWT authentication\n- Dashboard overview with date selector tabs\n- Conversations list with filters\n- Conversation detail with message thread\n- Manual reply form\n- Modern purple-blue gradient theme\n\n## Security\n- JWT authentication required\n- OWNER or ADMIN role required\n- Automatic organization scoping via @CurrentOrg decorator\n- No cross-organization data access\n\n## Tech Stack\n- **Backend**: NestJS, Prisma, PostgreSQL\n- **Frontend**: Next.js 14, TanStack Query, Tailwind CSS\n- **Auth**: JWT with refresh tokens\n- **API**: RESTful with Swagger docs\n\n## Testing\n1. Login via /auth/login endpoint\n2. Token automatically saved to collection variable\n3. All dashboard endpoints use saved token\n4. Update conversation ID in path variables as needed"
     }
   ],
   "variable": [
