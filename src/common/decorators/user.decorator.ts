@@ -7,8 +7,5 @@ export const CurrentUser = createParamDecorator((data: unknown, ctx: ExecutionCo
 
 export const CurrentOrg = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
   const request = ctx.switchToHttp().getRequest();
-  return {
-    orgId: request.user?.orgId,
-    role: request.user?.role,
-  };
+  return request.user?.orgId;
 });

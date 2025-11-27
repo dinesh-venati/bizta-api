@@ -27,6 +27,7 @@ import { QueuesModule } from './queues/queues.module';
 import { SummaryModule } from './modules/summary/summary.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { BusinessFaqModule } from './modules/business-faq/business-faq.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { BusinessFaqModule } from './modules/business-faq/business-faq.module';
     AuditModule,
     WhatsAppModule,
     BusinessFaqModule,
+    DashboardModule,
 
     // Queues
     QueuesModule,
